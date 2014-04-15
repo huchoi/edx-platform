@@ -39,3 +39,57 @@ window.rewriteStaticLinks = function(content, from, to) {
     var regex = new RegExp("(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}([-a-zA-Z0-9@:%_\+.~#?&//=]*))?"+from, 'g');
     return content.replace(regex, replacer);
 };
+
+// Appends a parameter to a path indicating initial signin
+window.appendParameter = function(path, key, value) {
+    // Check if the given path already contains a query string by looking for the "?" separator
+    if (path.indexOf("?") > -1) {
+        // Append signin parameter to the existing query string
+        return path + "&" + key + "=" + value;
+
+    }
+    else {
+        // Append new query string containing the signin parameter
+        return path + "?" + key + "=" + value;
+    }
+};
+
+// Convert a query string to a key/value object
+window.parseQueryString = function(queryString) {
+    var parameters = {}, queries, pair, i, l;
+
+    // Split the query string into key/value pairs
+    queries = queryString.split("&");
+
+    // Break the array of strings into an object
+    for (i = 0, l = queries.length; i < l; i++) {
+        pair = queries[i].split('=');
+        parameters[pair[0]] = pair[1];
+    }
+
+    return parameters
+};
+
+// Check if the user recently enrolled in a course by looking at a referral URL
+window.checkRecentEnrollment = function(referrer) {
+    var enrolledIn = null;
+    
+    // Check if the referrer URL contains a query string
+    if (referrer.indexOf("?") > -1) {
+        referrerQueryString = referrer.split("?")[1];
+    } else {
+        referrerQueryString = "";
+    }
+
+    if (referrerQueryString != "") {
+        // Convert a non-empty query string into a key/value object
+        var referrerParameters = window.parseQueryString(referrerQueryString);
+        if ("course_id" in referrerParameters && "enrollment_action" in referrerParameters) {
+            if (referrerParameters.enrollment_action == "enroll") {
+                enrolledIn = referrerParameters.course_id;
+            }
+        }
+    }
+
+    return enrolledIn
+}
