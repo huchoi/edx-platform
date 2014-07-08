@@ -8,10 +8,11 @@ import math
 from unittest import skip, skipUnless
 
 from xmodule.partitions.partitions import Group, UserPartition
-from bok_choy.promise import Promise
+from bok_choy.promise import Promise, EmptyPromise
 
 from ..fixtures.course import CourseFixture, XBlockFixtureDesc
 from ..pages.studio.component_editor import ComponentEditorView
+from ..pages.studio.overview import CourseOutlinePage
 from ..pages.studio.settings_advanced import AdvancedSettingsPage
 from ..pages.studio.settings_group_configurations import GroupConfigurationsPage
 from ..pages.studio.auto_auth import AutoAuthPage
@@ -259,13 +260,18 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         ).install()
 
         self.course_fix = course_fix
-
-        self.course_fix = course_fix
         self.user = course_fix.user
 
     def setUp(self):
         super(GroupConfigurationsTest, self).setUp()
         self.page = GroupConfigurationsPage(
+            self.browser,
+            self.course_info['org'],
+            self.course_info['number'],
+            self.course_info['run']
+        )
+
+        self.outline_page = CourseOutlinePage(
             self.browser,
             self.course_info['org'],
             self.course_info['number'],
@@ -341,7 +347,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
 
         self.page.visit()
 
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
         # no groups when the the configuration is collapsed
         self.assertEqual(len(config.groups), 0)
         self._assert_fields(
@@ -351,7 +357,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
             groups=["Group 0", "Group 1"]
         )
 
-        config = self.page.group_configurations()[1]
+        config = self.page.group_configurations[1]
 
         self._assert_fields(
             config,
@@ -374,10 +380,10 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         Then I see the group configuration is saved successfully and has the new data
         """
         self.page.visit()
-        self.assertEqual(len(self.page.group_configurations()), 0)
+        self.assertEqual(len(self.page.group_configurations), 0)
         # Create new group configuration
         self.page.create()
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
         config.name = "New Group Configuration Name"
         config.description = "New Description of the group configuration."
         config.groups[1].name = "New Group Name"
@@ -442,7 +448,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         self.page.visit()
         # Create new group configuration
         self.page.create()
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
         config.name = "New Group Configuration Name"
         # Add new group
         config.add_group()
@@ -459,7 +465,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         self.verify_groups(container, ['Group A', 'Group B', 'New group'], [])
 
         self.page.visit()
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
         config.edit()
         config.name = "Second Group Configuration Name"
         # Add new group
@@ -500,11 +506,11 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         """
         self.page.visit()
 
-        self.assertEqual(len(self.page.group_configurations()), 0)
+        self.assertEqual(len(self.page.group_configurations), 0)
         # Create new group configuration
         self.page.create()
 
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
         config.name = "Name of the Group Configuration"
         config.description = "Description of the group configuration."
         # Add new group
@@ -512,7 +518,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         # Cancel the configuration
         config.cancel()
 
-        self.assertEqual(len(self.page.group_configurations()), 0)
+        self.assertEqual(len(self.page.group_configurations), 0)
 
     def test_can_cancel_editing_of_group_configuration(self):
         """
@@ -534,7 +540,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         self.course_fix._add_advanced_settings()
         self.page.visit()
 
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
 
         config.name = "New Group Configuration Name"
         config.description = "New Description of the group configuration."
@@ -578,7 +584,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         # Create new group configuration
         self.page.create()
         # Leave empty required field
-        config = self.page.group_configurations()[0]
+        config = self.page.group_configurations[0]
         config.description = "Description of the group configuration."
 
         try_to_save_and_verify_error_message("Group Configuration name is required")
@@ -600,3 +606,63 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
             description="Description of the group configuration.",
             groups=["Group A", "Group B"]
         )
+
+    def test_group_configuration_usage(self):
+        """
+        Scenario: Ensure that the links to units using a group configuration work correctly.
+        Given I have a course without group configurations
+        And I create new group configuration with 2 default groups
+        Then I see a link to the outline page
+        When I click on the outline link
+        Then I see the outline page
+        When I create a unit and assign the newly created group configuration
+        And open the Group Configuaration page
+        Then I see a link to the newly created unit
+        When I click on the unit link
+        Then I see correct unit page
+        """
+        # Create a new group configurations
+        self.course_fix.add_advanced_settings({
+            u"user_partitions": {
+                "value": [
+                    UserPartition(0, "Name", "Description.", [Group("0", "Group A"), Group("1", "Group B")]).to_json()
+                ],
+            },
+        })
+        self.course_fix._add_advanced_settings()
+
+        # Go to the Group Configuration Page and click on outline anchor
+        self.page.visit()
+        config = self.page.group_configurations[0]
+        config.toggle()
+        config.click_outline_anchor()
+
+        # Waiting for the page load and verify that we've landed on course outline page
+        EmptyPromise(
+            lambda: self.outline_page.is_browser_on_page(), "loaded page {!r}".format(self.outline_page),
+            timeout=30
+        ).fulfill()
+
+        # Create a unit and assign newly created group configuration
+        unit = self.go_to_unit_page(make_draft=True)
+        add_advanced_component(unit, 0, 'split_test')
+        container = self.go_to_container_page()
+        container.edit()
+        component_editor = ComponentEditorView(self.browser, container.locator)
+        component_editor.set_select_value_and_save('Group Configuration', 'Name')
+
+        # Go to the Group Configuration Page and click unit anchor
+        self.page.visit()
+        config = self.page.group_configurations[0]
+        config.toggle()
+
+        usages = config.usages[0]
+        config.click_unit_anchor()
+
+        # Waiting for the page load and verify that we've landed on the unit page
+        EmptyPromise(
+            lambda: unit.is_browser_on_page(), "loaded page {!r}".format(unit),
+            timeout=30
+        ).fulfill()
+
+        self.assertIn(unit.name, usages)

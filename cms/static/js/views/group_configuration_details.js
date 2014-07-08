@@ -30,6 +30,8 @@ function(BaseView, _, gettext) {
         render: function() {
             var attrs = $.extend({}, this.model.attributes, {
                 groupsCountMessage: this.getGroupsCountTitle(),
+                usageCountMessage: this.getUsageCountTitle(),
+                outlineUrl: this.model.collection.outlineUrl,
                 index: this.model.collection.indexOf(this.model)
             });
 
@@ -62,6 +64,25 @@ function(BaseView, _, gettext) {
                     'Contains %(count)s group', 'Contains %(count)s groups',
                     count
                 );
+
+            return interpolate(message, { count: count }, true);
+        },
+
+        getUsageCountTitle: function () {
+            var count = this.model.get('usage').length, message;
+
+            if (count === 0) {
+                message = gettext('Not in Use');
+            } else {
+                message = ngettext(
+                    /*
+                        Translators: 'count' is number of units that the group
+                        configuration is used in.
+                    */
+                    'is used in %(count)s unit', 'is used in %(count)s units',
+                    count
+                );
+            }
 
             return interpolate(message, { count: count }, true);
         }
