@@ -448,13 +448,13 @@ class MixedModuleStore(ModuleStoreDraftAndPublished, ModuleStoreWriteBase):
         store = self._get_modulestore_for_courseid(course_id)
         return store.compute_publish_state(xblock)
 
-    def publish(self, location, user_id):
+    def publish(self, location, user_id, **kwargs):
         """
         Save a current draft to the underlying modulestore
         Returns the newly published item.
         """
         store = self._verify_modulestore_support(location.course_key, 'publish')
-        return store.publish(location, user_id)
+        return store.publish(location, user_id, **kwargs)
 
     def unpublish(self, location, user_id):
         """
