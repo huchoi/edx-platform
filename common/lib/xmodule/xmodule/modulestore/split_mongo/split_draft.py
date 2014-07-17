@@ -111,6 +111,11 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
         else:
             return key
 
+    def update_item(self, descriptor, user_id, revision=None, **kwargs):
+        new_usage_key = self._map_revision_to_branch(descriptor.location)
+        descriptor.location = new_usage_key
+        return super(DraftVersioningModuleStore, self).update_item(descriptor, user_id, **kwargs)
+
     def has_item(self, usage_key, revision=None):
         """
         Returns True if location exists in this ModuleStore.
