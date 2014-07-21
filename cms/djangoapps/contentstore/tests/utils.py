@@ -13,6 +13,7 @@ from xmodule.modulestore import PublishState, ModuleStoreEnum, mongo
 from xmodule.modulestore.inheritance import own_metadata
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory, ItemFactory
+from xmodule.modulestore.draft_and_published import DIRECT_ONLY_CATEGORIES
 from xmodule.modulestore.xml_importer import import_from_xml
 from student.models import Registration
 from opaque_keys.edx.locations import SlashSeparatedCourseKey, AssetLocation
@@ -351,7 +352,7 @@ class CourseTestCase(ModuleStoreTestCase):
                 return supposed_state
             # published == item in all respects, so return public
             return PublishState.public
-        elif supposed_state == PublishState.public and item.location.category in mongo.base.DIRECT_ONLY_CATEGORIES:
+        elif supposed_state == PublishState.public and item.location.category in DIRECT_ONLY_CATEGORIES:
             if not all([
                 self.store.has_item(child_loc, revision=ModuleStoreEnum.RevisionOption.draft_only)
                 for child_loc in item.children

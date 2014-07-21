@@ -1806,8 +1806,8 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
         new_block = source_blocks[encoded_block_id]
         if destination_block:
             if destination_block['edit_info']['update_version'] != new_block['edit_info']['update_version']:
-                source_children = new_block['fields']['children']
-                for child in destination_block['fields']['children']:
+                source_children = new_block['fields'].get('children', [])
+                for child in destination_block['fields'].get('children', []):
                     try:
                         source_children.index(child)
                     except ValueError:

@@ -5,8 +5,7 @@ Module for the dual-branch fall-back Draft->Published Versioning ModuleStore
 from ..exceptions import ItemNotFoundError
 from split import SplitMongoModuleStore
 from xmodule.modulestore import ModuleStoreEnum, PublishState
-from xmodule.modulestore.draft_and_published import ModuleStoreDraftAndPublished
-from xmodule.modulestore.draft import DIRECT_ONLY_CATEGORIES
+from xmodule.modulestore.draft_and_published import ModuleStoreDraftAndPublished, DIRECT_ONLY_CATEGORIES
 
 
 class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleStore):
@@ -16,15 +15,63 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
     """
     def create_course(self, org, course, run, user_id, **kwargs):
         master_branch = kwargs.pop('master_branch', ModuleStoreEnum.BranchName.draft)
-        return super(DraftVersioningModuleStore, self).create_course(
+        item = super(DraftVersioningModuleStore, self).create_course(
             org, course, run, user_id, master_branch=master_branch, **kwargs
         )
+        return self._auto_publish(item, user_id)
 
     def get_courses(self):
         """
         Returns all the courses on the Draft branch (which is a superset of the courses on the Published branch).
         """
         return super(DraftVersioningModuleStore, self).get_courses(ModuleStoreEnum.BranchName.draft)
+
+    def _auto_publish(self, item, user_id, black_list=None):
+        """
+        Returns the given item after publishing it if the item.category is DIRECT_ONLY
+        """
+        if item.location.category in DIRECT_ONLY_CATEGORIES:
+            try:
+                self.publish(item.location, user_id, black_list=black_list)
+            except ItemNotFoundError:
+                # Course root not published
+                pass
+        return item
+
+    def update_item(self, descriptor, user_id, allow_not_found=False, force=False):
+        item = super(DraftVersioningModuleStore, self).update_item(
+            descriptor,
+            user_id,
+            allow_not_found=allow_not_found,
+            force=force
+        )
+        # On update_item we don't want to auto publish the children
+        black_list = None
+        if hasattr(item, 'children'):
+            black_list = item.children
+        return self._auto_publish(item, user_id, black_list=black_list)
+
+    def create_item(
+        self, user_id, course_key, block_type, block_id=None,
+        definition_locator=None, fields=None,
+        force=False, continue_version=False, **kwargs
+    ):
+        item = super(DraftVersioningModuleStore, self).create_item(
+            user_id, course_key, block_type, block_id=block_id,
+            definition_locator=definition_locator, fields=fields,
+            force=force, continue_version=continue_version, **kwargs
+        )
+        return self._auto_publish(item, user_id)
+
+    def create_child(
+            self, user_id, parent_usage_key, block_type, block_id=None,
+            fields=None, continue_version=False, **kwargs
+    ):
+        item = super(DraftVersioningModuleStore, self).create_child(
+            user_id, parent_usage_key, block_type, block_id=block_id,
+            fields=fields, continue_version=False, **kwargs
+        )
+        return self._auto_publish(item, user_id)
 
     def delete_item(self, location, user_id, revision=None, **kwargs):
         """
@@ -132,7 +179,9 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
             location.course_key.for_branch(ModuleStoreEnum.BranchName.draft),
             location.course_key.for_branch(ModuleStoreEnum.BranchName.published),
             [location],
+            blacklist=kwargs.pop('black_list', None)
         )
+        return self.get_item(location.for_branch(ModuleStoreEnum.BranchName.published))
 
     def unpublish(self, location, user_id):
         """

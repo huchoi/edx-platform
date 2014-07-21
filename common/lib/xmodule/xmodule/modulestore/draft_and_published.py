@@ -5,6 +5,9 @@ This module provides an abstraction for Module Stores that support Draft and Pub
 from abc import ABCMeta, abstractmethod
 from . import ModuleStoreEnum
 
+# Things w/ these categories should never be marked as version=DRAFT
+DIRECT_ONLY_CATEGORIES = ['course', 'chapter', 'sequential', 'about', 'static_tab', 'course_info']
+
 class ModuleStoreDraftAndPublished(object):
     """
     A mixin for a read-write database backend that supports two branches, Draft and Published, with
