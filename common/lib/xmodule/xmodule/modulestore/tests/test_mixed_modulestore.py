@@ -317,6 +317,83 @@ class TestMixedModuleStore(unittest.TestCase):
         self.assertTrue(course.show_calculator)
 
     @ddt.data('draft', 'split')
+    def test_has_changes_direct_only(self, default_ms):
+        """
+        Tests that has_changes() returns false when a new xblock in a direct only category is checked
+        """
+        self.initdb(default_ms)
+
+        test_course = self.store.create_course('testx', 'GreekHero', 'test_run', self.user_id)
+
+        # Create dummy direct only xblocks
+        chapter = self.store.create_item(
+            self.user_id,
+            test_course.id.version_agnostic(),
+            'chapter',
+            block_id='vertical_container'
+        )
+
+        # Check that neither xblock has changes
+        self.assertFalse(self.store.has_changes(test_course.location))
+        self.assertFalse(self.store.has_changes(chapter.location))
+
+    @ddt.data('draft', 'split')
+    def test_has_changes(self, default_ms):
+        """
+        Tests that has_changes() only returns true when changes are present
+        """
+        self.initdb(default_ms)
+
+        test_course = self.store.create_course('testx', 'GreekHero', 'test_run', self.user_id)
+
+        # Create a dummy component to test against
+        xblock = self.store.create_item(
+            self.user_id,
+            test_course.id.version_agnostic(),
+            'vertical',
+            block_id='test_vertical'
+        )
+
+        # Not yet published, so changes are present
+        self.assertTrue(self.store.has_changes(xblock.location))
+
+        # Publish and verify that there are no unpublished changes
+        self.store.publish(xblock.location, self.user_id)
+        self.assertFalse(self.store.has_changes(xblock.location))
+
+        # Change the component, then check that there now are changes
+        component = self.store.get_item(xblock.location)
+        component.display_name = 'Changed Display Name'
+        self.store.update_item(component, self.user_id)
+        self.assertTrue(self.store.has_changes(xblock.location))
+
+        # Publish and verify again
+        self.store.publish(xblock.location, self.user_id)
+        self.assertFalse(self.store.has_changes(xblock.location))
+
+    @ddt.data('draft', 'split')
+    def test_has_changes_missing_child(self, default_ms):
+        self.initdb(default_ms)
+
+        test_course = self.store.create_course('testx', 'GreekHero', 'test_run', self.user_id)
+
+        # Create the parent and point it to a fake child
+        parent = self.store.create_item(
+            self.user_id,
+            test_course.id.version_agnostic(),
+            'sequential',
+            block_id='parent'
+        )
+        parent.children += [test_course.location.replace(
+            block_type='vertical',
+            block_id='does_not_exist'
+        )]
+        self.store.update_item(parent, self.user_id)
+
+        # Check the parent for changes should return False and not throw an exception
+        self.assertFalse(self.store.has_changes(parent.location))
+
+    @ddt.data('draft', 'split')
     def test_delete_item(self, default_ms):
         """
         Delete should reject on r/o db and work on r/w one
@@ -367,10 +444,6 @@ class TestMixedModuleStore(unittest.TestCase):
         self.assertFalse(self.store.has_item(vert_loc))
         self.assertFalse(self.store.has_item(leaf_loc))
         self.assertNotIn(vert_loc, course.children)
-
-        # TODO can remove this once LMS-2869 is implemented
-        # first create a Published branch
-        self.store.publish(self.course_locations[self.MONGO_COURSEID], self.user_id)
 
         # reproduce bug STUD-1965
         # create and delete a private vertical with private children
@@ -731,11 +804,6 @@ class TestMixedModuleStore(unittest.TestCase):
         self.initdb(default_ms)
         self._create_block_hierarchy()
 
-        # TODO - Remove this call to explicitly Publish the course once LMS-2869 is implemented
-        # For now, we need this since we can't publish a child item without its course already been published
-        course_location = self.course_locations[self.MONGO_COURSEID]
-        self.store.publish(course_location, self.user_id)
-
         # start off as Private
         item = self.store.create_child(self.user_id, self.writable_chapter_location, 'problem', 'test_compute_publish_state')
         item_location = item.location.version_agnostic()
@@ -770,6 +838,40 @@ class TestMixedModuleStore(unittest.TestCase):
         item = self.store.update_item(item, self.user_id)
         self.assertTrue(self.store.has_changes(item.location))
         self.assertEquals(self.store.compute_publish_state(item), PublishState.draft)
+
+    @ddt.data('draft', 'split')
+    def test_auto_publish(self, default_ms):
+        """
+        Test that the correct things have been published automatically
+        Assumptions:
+            * we auto-publish courses, chapters, sequentials
+            * we don't auto-publish problems
+        """
+
+        self.initdb(default_ms)
+
+        # test create_course to make sure we are autopublishing
+        test_course = self.store.create_course('testx', 'GreekHero', 'test_run', self.user_id)
+        self.assertEqual(self.store.compute_publish_state(test_course), PublishState.public)
+
+        test_course_key = test_course.id.version_agnostic()
+
+        # test create_item to make sure we are autopublishing
+        chapter = self.store.create_item(self.user_id, test_course_key, 'chapter', 'Overview')
+        self.assertEqual(self.store.compute_publish_state(chapter), PublishState.public)
+
+        chapter_location = chapter.location.version_agnostic()
+
+        # test create_child to make sure we are autopublishing
+        sequential = self.store.create_child(self.user_id, chapter_location, 'sequential', 'Sequence')
+        self.assertEqual(self.store.compute_publish_state(sequential), PublishState.public)
+
+        # verify that we aren't publishing other types
+        problem_child = self.store.create_child(self.user_id, chapter_location, 'problem', 'Problem_Child')
+        self.assertEqual(self.store.compute_publish_state(problem_child), PublishState.private)
+
+        problem_item = self.store.create_item(self.user_id, test_course_key, 'problem', 'Problem_Item')
+        self.assertEqual(self.store.compute_publish_state(problem_item), PublishState.private)
 
     @ddt.data('draft', 'split')
     def test_get_courses_for_wiki_shared(self, default_ms):

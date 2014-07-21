@@ -99,6 +99,9 @@ log = logging.getLogger(__name__)
 #
 #==============================================================================
 
+# When black_lists include this everything should be excluded
+EXCLUDE_ALL = '*'
+
 
 class SplitMongoModuleStore(ModuleStoreWriteBase):
     """
@@ -1358,7 +1361,8 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
             destination_structure = self._lookup_course(destination_course)['structure']
             destination_structure = self._version_structure(destination_structure, user_id)
 
-        blacklist = [shunned.block_id for shunned in blacklist or []]
+        if blacklist != EXCLUDE_ALL:
+            blacklist = [shunned.block_id for shunned in blacklist or []]
         # iterate over subtree list filtering out blacklist.
         orphans = set()
         destination_blocks = destination_structure['blocks']
@@ -1817,9 +1821,11 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
                 new_block['edit_info']['update_version'],
                 raw=True
             )
-        for child in destination_block['fields'].get('children', []):
-            if child not in blacklist:
-                orphans.update(self._publish_subdag(user_id, child, source_blocks, destination_blocks, blacklist))
+
+        if blacklist != EXCLUDE_ALL:
+            for child in destination_block['fields'].get('children', []):
+                if child not in blacklist:
+                    orphans.update(self._publish_subdag(user_id, child, source_blocks, destination_blocks, blacklist))
         destination_blocks[encoded_block_id] = destination_block
         return orphans
 
@@ -1828,7 +1834,10 @@ class SplitMongoModuleStore(ModuleStoreWriteBase):
         Filter out blacklist from the children field in fields. Will construct a new list for children;
         so, no need to worry about copying the children field, but it will modify fiels.
         """
-        fields['children'] = [child for child in fields.get('children', []) if child not in blacklist]
+        if blacklist == EXCLUDE_ALL:
+            fields['children'] = []
+        else:
+            fields['children'] = [child for child in fields.get('children', []) if child not in blacklist]
         return fields
 
     def _delete_if_true_orphan(self, orphan, structure):
