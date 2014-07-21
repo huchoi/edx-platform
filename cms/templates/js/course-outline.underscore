@@ -11,7 +11,7 @@
                 <h3 class="xblock-title">
             <% } %>
 
-                <% if (xblockInfo.get('category') === 'vertical') { %>
+                <% if (xblockInfo.isVertical()) { %>
                     <a href="<%= xblockInfo.get('studio_url') %>"><%= xblockInfo.get('display_name') %></a>
                 <% } else { %>
                     <span class="wrapper-xblock-field incontext-editor is-editable" data-field="display_name" data-field-display-name="<%= gettext("Display Name") %>">
@@ -22,7 +22,7 @@
 
             <div class="item-actions">
                 <ul class="actions-list">
-                    <% if (isSectionOrSubsection) { %>
+                    <% if (xblockInfo.isEditable()) { %>
                         <li class="action-item action-configure">
                             <a href="#" data-tooltip="<%= gettext('Configure') %>" class="configure-button action-button">
                                 <i class="icon-gear"></i>
@@ -52,11 +52,10 @@
                     <% if (xblockInfo.get('due_date')) { %>
                         <i class="icon-time"></i>
                         <%= gettext('Due date:') %> <%= xblockInfo.get('due_date') %>
-                        <%= gettext('Policy:') %> <%= xblockInfo.get('format')  ? xblockInfo.get('format')  : 'notgraded' %>
+                        <%= gettext('Policy:') %> <%= xblockInfo.get('format')  ? xblockInfo.get('format')  : gettext('Not Graded') %>
                     <% } %>
                 </div>
             <% } %>
-
 
             <div class="item-actions">
                 <ul class="actions-list">

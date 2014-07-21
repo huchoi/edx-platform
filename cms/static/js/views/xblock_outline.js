@@ -72,8 +72,7 @@ define(["jquery", "underscore", "gettext", "js/views/baseview", "js/views/utils/
                     addChildLabel: addChildName,
                     defaultNewChildName: defaultNewChildName,
                     isCollapsed: isCollapsed,
-                    includesChildren: this.shouldRenderChildren(),
-                    isSectionOrSubsection: this.isSectionOrSubsection(),
+                    includesChildren: this.shouldRenderChildren()
                 });
                 if (this.parentInfo) {
                     this.setElement($(html));
@@ -237,9 +236,6 @@ define(["jquery", "underscore", "gettext", "js/views/baseview", "js/views/utils/
                 });
             },
 
-
-
-
             handleAddEvent: function(event) {
                 var self = this,
                     target = $(event.target),
@@ -248,10 +244,6 @@ define(["jquery", "underscore", "gettext", "js/views/baseview", "js/views/utils/
                 XBlockViewUtils.addXBlock(target).done(function(locator) {
                     self.onChildAdded(locator, category, event);
                 });
-            },
-
-           isSectionOrSubsection: function() {
-                return _.contains(['sequential', 'chapter'], this.model.get('category'));
             }
         });
 
