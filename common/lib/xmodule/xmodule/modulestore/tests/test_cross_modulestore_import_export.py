@@ -23,7 +23,7 @@ from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from xmodule.tests import CourseComparisonTest
 
-from xmodule.modulestore.split_mongo.split import SplitMongoModuleStore
+from xmodule.modulestore.split_mongo.split_draft import DraftVersioningModuleStore
 from xmodule.modulestore.mongo.base import ModuleStoreEnum
 from xmodule.modulestore.mongo.draft import DraftModuleStore
 from xmodule.modulestore.mixed import MixedModuleStore
@@ -127,7 +127,6 @@ class VersioningModulestoreBuilder(object):
                 all of its assets.
         """
         # pylint: disable=unreachable
-        raise SkipTest("DraftVersioningModuleStore doesn't yet support the same interface as the rest of the modulestores")
         doc_store_config = dict(
             db='modulestore{}'.format(random.randint(0, 10000)),
             collection='split_module',
@@ -136,7 +135,7 @@ class VersioningModulestoreBuilder(object):
         # Set up a temp directory for storing filesystem content created during import
         fs_root = mkdtemp()
 
-        modulestore = SplitMongoModuleStore(
+        modulestore = DraftVersioningModuleStore(
             contentstore,
             doc_store_config,
             fs_root,
