@@ -34,3 +34,32 @@ class NewCourseOutlinePage(CoursePage):
     def press_save_on_modal(self):
         self.q(css=".action-save").present
         self.q(css=".action-save").first.click()
+        self.wait_for_ajax()
+
+    def release_dates_present(self):
+        dates = self.q(css="div.meta-info").text
+        return all([text == u'Released: Jan 01, 1970 at 00:00 UTC' for text in dates])
+
+    def section_release_date(self):
+        return self.q(css="div.meta-info").first.text[0]
+
+    def subsection_release_date(self):
+        return self.q(css="div.meta-info").nth(1).text[0]
+
+    def due_date_present(self):
+        due_date = self.q(css="div.meta-info").nth(1).text
+        return all([text == u'Released: Jan 01, 1970 at 00:00 UTC' for text in dates])
+
+    def release_date_in_modal(self):
+        return self.q(css="#start_date").first.attrs('value')[0]
+
+    def due_date_in_modal(self):
+        return self.q(css="#due_date").first.attrs('value')[0]
+
+    def set_release_day(self, day_number):
+        self.q(css="#start_date").first.click()
+        self.q(css="a.ui-state-default").nth(day_number-1).click()
+
+    def set_due_day(self, day_number):
+        self.q(css="#due_date").first.click()
+        self.q(css="a.ui-state-default").nth(day_number-1).click()

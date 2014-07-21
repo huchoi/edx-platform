@@ -15,7 +15,8 @@ from ..pages.studio.utils import add_discussion
 from ..pages.lms.courseware import CoursewarePage
 
 from unittest import skip
-from bok_choy.promise import Promise
+from bok_choy.promise import Promise, EmptyPromise
+
 
 class NewCourseOutline(UniqueCourseTest):
     """
@@ -48,6 +49,7 @@ class NewCourseOutline(UniqueCourseTest):
         )
 
         self.auth_page.visit()
+        self.outline.visit()
 
     def setup_fixtures(self):
         course_fix = CourseFixture(
@@ -78,7 +80,6 @@ class NewCourseOutline(UniqueCourseTest):
         """
         I can edit section.
         """
-        self.outline.visit()
         self.outline.edit_section()
 
         # chek that modal is section specific
@@ -94,7 +95,6 @@ class NewCourseOutline(UniqueCourseTest):
         """
         I can edit subsection.
         """
-        self.outline.visit()
         self.outline.edit_subsection()
         self.outline.modal_is_shown()
 
@@ -107,7 +107,62 @@ class NewCourseOutline(UniqueCourseTest):
         self.outline.press_save_on_modal()
 
 
-   # I can see released dates
-   # I can grade subsection
-   # I can see due date and grading format after grading subsection
+    def test_I_can_see_release_dates(self):
+        self.assertTrue(self.outline.release_dates_present())
+
+    def test_I_can_edit_release_date_subsection(self):
+        self.outline.edit_subsection()
+        self.outline.modal_is_shown()
+        self.assertEqual(self.outline.release_date_in_modal(), u'01/01/70')
+        self.outline.set_release_day(12)
+        EmptyPromise(
+            lambda: self.outline.release_date_in_modal() == u'1/12/1970',
+            "Date is updated"
+        ).fulfill()
+        self.outline.press_save_on_modal()
+        EmptyPromise(
+            lambda: 'Released: Jan 12, 1970' in self.outline.subsection_release_date(),
+            "Date is updated",
+        ).fulfill()
+
+
+    def test_I_can_edit_release_date_section(self):
+        self.outline.edit_section()
+        self.outline.modal_is_shown()
+        self.assertEqual(self.outline.release_date_in_modal(), u'01/01/70')
+        self.outline.set_release_day(14)
+        EmptyPromise(
+            lambda: self.outline.release_date_in_modal() == u'1/14/1970',
+            "Date is updated"
+        ).fulfill()
+        self.outline.press_save_on_modal()
+        EmptyPromise(
+            lambda: 'Released: Jan 14, 1970' in self.outline.section_release_date(),
+            "Date is updated",
+        ).fulfill()
+
+    def test_I_can_edit_due_date(self):
+        self.outline.edit_subsection()
+        self.outline.modal_is_shown()
+        self.assertEqual(self.outline.due_date_in_modal(), u'')
+        self.outline.set_due_day(21)
+        EmptyPromise(
+            lambda: self.outline.due_date_in_modal() == u'7/21/2014',
+            "Date is updated"
+        ).fulfill()
+        self.outline.press_save_on_modal()
+        EmptyPromise(
+            lambda: 'Due: Jul 21, 2014' in self.outline.section_due_date(),
+            "Date is updated",
+        ).fulfill()
+
+
+    # def test_I_can_grade_subsection(self):
+    #     """
+    #     I can grade subsection and see grading format after grading subsection.
+    #     """
+    #     self.outline.edit_subsection()
+    #     self.outline.modal_is_shown()
+    #     import ipdb; ipdb.set_trace()
+
 
