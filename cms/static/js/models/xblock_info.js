@@ -1,4 +1,6 @@
-define(['backbone', 'underscore', 'js/utils/module'], function(Backbone, _, ModuleUtils) {
+define(
+    ['backbone', 'underscore', 'underscore.string', 'js/utils/module'],
+function(Backbone, _, str, ModuleUtils) {
     'use strict';
     var XBlockInfo = Backbone.Model.extend({
 
@@ -120,12 +122,12 @@ define(['backbone', 'underscore', 'js/utils/module'], function(Backbone, _, Modu
          * @param {Object} Client fields.
          * @return {Object}
          */
-        preprocessFieldNames: function(metadata) {
+        convertFieldNames: function(metadata) {
             var result = {};
 
             _.each(metadata, function (value, fieldName) {
                 if (_.has(this.conversions, fieldName)) {
-                    fieldName = this.conversions.fieldName;
+                    fieldName = this.conversions[fieldName];
                 }
                 result[fieldName] = value;
             }, this);
@@ -152,7 +154,7 @@ define(['backbone', 'underscore', 'js/utils/module'], function(Backbone, _, Modu
             var helpers = {};
 
             _.each(['course', 'chapter', 'sequential', 'vertical'], function (item) {
-                helpers['is' + item.toUpperCase()] = function () {
+                helpers['is' + str.titleize(item)] = function () {
                     return this.get('category') === item;
                 };
             }, this);

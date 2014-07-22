@@ -3,7 +3,8 @@
  */
 define(["jquery", "underscore", "gettext", "js/views/utils/view_utils", "js/utils/module"],
     function($, _, gettext, ViewUtils, ModuleUtils) {
-        var addXBlock, deleteXBlock, createUpdateRequestData, updateXBlockField;
+        var addXBlock, deleteXBlock, createUpdateRequestData, updateXBlockField,
+            updateXBlockFields;
 
         /**
          * Adds an xblock based upon the data attributes of the specified add button. A promise
@@ -90,12 +91,12 @@ define(["jquery", "underscore", "gettext", "js/views/utils/view_utils", "js/util
          * @param newValue The new value for the field.
          * @returns {jQuery promise} A promise representing the updating of the field.
          */
-        updateXBlockFields = function(xblockInfo, metadata, silent) {
+        updateXBlockFields = function(xblockInfo, xblockData, silent) {
             return ViewUtils.runOperationShowingMessage(gettext('Saving&hellip;'),
                 function() {
-                    var processedData = xblockInfo.preprocessFieldNames(metadata);
-                    return xblockInfo.save(processedData, { patch: true, silent: silent});
-                });
+                    return xblockInfo.save(xblockData, { patch: true, silent: silent });
+                }
+            );
         };
 
         return {

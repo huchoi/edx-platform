@@ -181,6 +181,7 @@ def xblock_handler(request, usage_key_string):
             content_type="text/plain"
         )
 
+
 # pylint: disable=unused-argument
 @require_http_methods(("GET"))
 @login_required
@@ -629,6 +630,7 @@ def create_xblock_info(xblock, data=None, metadata=None, include_ancestor_info=F
 
         return None
 
+    graders = CourseGradingModel.fetch(xblock.location.course_key).graders
     xblock_info = {
         "id": unicode(xblock.location),
         "display_name": xblock.display_name_with_default,
@@ -645,6 +647,10 @@ def create_xblock_info(xblock, data=None, metadata=None, include_ancestor_info=F
         "release_date_from": _get_release_date_from(xblock) if release_date else None,
         "visible_to_staff_only": xblock.visible_to_staff_only,
         "currently_visible_to_students": is_currently_visible_to_students(xblock),
+        "graded": xblock.graded,
+        "due_date": get_default_time_display(xblock.due),
+        "format": xblock.format,
+        "course_graders": json.dumps([grader.get('type') for grader in graders]),
     }
     if data is not None:
         xblock_info["data"] = data
@@ -656,11 +662,6 @@ def create_xblock_info(xblock, data=None, metadata=None, include_ancestor_info=F
         xblock_info['child_info'] = _create_xblock_child_info(
             xblock, include_children_predicate=include_children_predicate
         )
-    if xblock.category == u'sequential' and not is_unit(xblock):
-        xblock_info['graded'] = xblock.graded
-        xblock_info['due_date'] = get_default_time_display(xblock.due)
-        xblock_info['format'] = xblock.format
-        xblock_info['course_graders'] =  json.dumps(CourseGradingModel.fetch(xblock.location.course_key).graders)
 
     return xblock_info
 

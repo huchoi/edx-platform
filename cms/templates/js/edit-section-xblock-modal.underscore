@@ -31,7 +31,7 @@
                     <% if (xblockInfo.isSequential()) { %>
                       <ul class="list-actions">
                           <li class="action-item">
-                              <a href="#" data-tooltip="<%= gettext('Clear Release Date/Time') %>" class="sync-date action-button action-clear">
+                              <a href="#" data-tooltip="<%= gettext('Clear Release Date/Time') %>" class="clear-date action-button action-clear">
                                   <i class="icon-remove"></i>
                                   <span class="sr"><%= gettext('Clear Release Date/Time') %></span>
                               </a>
@@ -52,8 +52,8 @@
                       <label for="grading_type" class="label"><%= gettext('Grade as:') %></label>
                       <select class="input" id="grading_type">
                           <option value="notgraded"><%= gettext('Not Graded') %></option>
-                          <% graderTypes.each(function(grader) { %>
-                            <option value="<%= grader.get('type') %>"><%= grader.get('type') %></option>
+                          <% _.each(graderTypes, function(grader) { %>
+                            <option value="<%= grader %>"><%= grader %></option>
                           <% }); %>
                       </select>
                     </li>
@@ -79,7 +79,7 @@
 
                     <ul class="list-actions">
                       <li class="action-item">
-                        <a href="#" data-tooltip="<%= gettext('Clear Release Date/Time') %>" class="remove-date action-button action-clear">
+                        <a href="#" data-tooltip="<%= gettext('Clear Release Date/Time') %>" class="clear-date action-button action-clear">
                           <i class="icon-remove"></i>
                           <span class="sr"><%= gettext('Clear Grading Due Date') %></span>
                         </a>
