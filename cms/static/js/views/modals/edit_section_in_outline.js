@@ -30,7 +30,6 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
                 BaseModal.prototype.initialize.call(this);
                 this.events = _.extend({}, BaseModal.prototype.events, this.events);
                 this.template = this.loadTemplate('edit-section-xblock-modal');
-                this.xblockInfo = this.options.model;
                 this.options.title = this.getTitle();
                 this.initializeComponents();
             },
@@ -56,15 +55,21 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
 
             save: function(event) {
                 event.preventDefault();
-                var requestData = _.extend({}, this.getData(), {
-                    metadata: this.xblockInfo.convertFieldNames(this.getMetadata())
+                var requestData = _.extend({}, this.getRequestData(), {
+                    metadata: this.model.convertFieldNames(this.getMetadata())
                 });
                 XBlockViewUtils.updateXBlockFields(
-                    this.xblockInfo, requestData, true
+                    this.model, requestData, true
                 ).done(this.options.onSave);
                 this.hide();
             },
 
+            /**
+             * Call the method on each value in the list. If the element of the
+             * list doesn't have such a method it will be skipped.
+             * @param {String} methodName The method name needs to be called.
+             * @return {Object}
+             */
             invokeComponentMethod: function (methodName) {
                 var values = _.map(this.components, function (component) {
                     if (_.isFunction(component[methodName])) {
@@ -75,41 +80,56 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
                 return _.extend.apply(this, [{}].concat(values));
             },
 
+            /**
+             * Return context for the modal.
+             * @return {Object}
+             */
             getContext: function () {
                 return _.extend({
-                    xblockInfo: this.xblockInfo
+                    xblockInfo: this.model
                 }, this.invokeComponentMethod('getContext'));
             },
 
-            getData: function () {
-                return this.invokeComponentMethod('getData');
+            /**
+             * Return request data.
+             * @return {Object}
+             */
+            getRequestData: function () {
+                return this.invokeComponentMethod('getRequestData');
             },
 
+            /**
+             * Return metadata for the XBlock.
+             * @return {Object}
+             */
             getMetadata: function () {
                 return this.invokeComponentMethod('getMetadata');
             },
 
+            /**
+             * Initialize internal components.
+             */
             initializeComponents: function () {
                 this.components = [];
                 this.components.push(
                     new ReleaseDateView({
                         selector: '.scheduled-date-input',
                         parentView: this,
-                        model: this.xblockInfo
+                        model: this.model
                     })
                 );
 
-                if (this.xblockInfo.isSequential()) {
+                if (this.model.isSequential()) {
                     this.components.push(
                         new DueDateView({
                             selector: '.due-date-input',
                             parentView: this,
-                            model: this.xblockInfo
+                            model: this.model
                         }),
                         new GradingView({
                             selector: '.edit-settings-grading',
                             parentView: this,
-                            model: this.xblockInfo
+                            model: this.model
                         })
                     );
                 }
@@ -211,7 +231,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
                 return this.$('#grading_type').val();
             },
 
-            getData: function () {
+            getRequestData: function () {
                 return {
                     'graderType': this.getValue()
                 };

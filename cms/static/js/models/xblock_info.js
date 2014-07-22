@@ -102,6 +102,7 @@ function(Backbone, _, str, ModuleUtils) {
         },
 
         initialize: function () {
+            // Extend our Model by helper methods.
             _.extend(this, this.getCategoryHelpers());
         },
 
@@ -117,7 +118,7 @@ function(Backbone, _, str, ModuleUtils) {
         },
 
         /*
-         * Uses `conversions` property to harmonize fields on the client and
+         * Uses `conversions` property to harmonize fields between the client and
          * server.
          * @param {Object} Client fields.
          * @return {Object}
@@ -150,10 +151,15 @@ function(Backbone, _, str, ModuleUtils) {
             return childInfo && childInfo.children.length > 0;
         },
 
+        /**
+         * Return a list of convenience methods to check affiliation to the category.
+         * @return {Array}
+         */
         getCategoryHelpers: function () {
-            var helpers = {};
+            var categories = ['course', 'chapter', 'sequential', 'vertical'],
+                helpers = {};
 
-            _.each(['course', 'chapter', 'sequential', 'vertical'], function (item) {
+            _.each(categories, function (item) {
                 helpers['is' + str.titleize(item)] = function () {
                     return this.get('category') === item;
                 };
@@ -162,6 +168,10 @@ function(Backbone, _, str, ModuleUtils) {
             return helpers;
         },
 
+        /**
+         * Check if we can edit current XBlock or not on Course Outline page.
+         * @return {Boolean}
+         */
         isEditable: function() {
             return this.isSequential() || this.isChapter();
         }
