@@ -263,23 +263,15 @@ class CourseTestCase(ModuleStoreTestCase):
                     self.store.compute_publish_state(course2_item)
                 )
             except AssertionError:
-                # TODO LMS-11017 "Studio auto-publish course-wide features and settings"
-                # Temporary hack until autopublish implemented - right now, because we call
-                # update_item within create_course to set the wiki & other course-wide settings,
-                # the publish version does not necessarily equal the draft version in split.
-                # So if either item is in Split, just continue on
-                if not isinstance(course1_item.runtime.modulestore, SplitMongoModuleStore) and \
-                   not isinstance(course2_item.runtime.modulestore, SplitMongoModuleStore):
-                    # old mongo calls things draft if draft exists even if it's != published; so, do more work
-                    c1_state = self.compute_real_state(course1_item)
-                    c2_state = self.compute_real_state(course2_item)
-                    self.assertEqual(
-                        c1_state,
-                        c2_state,
-                        "Course item {} in state {} != course item {} in state {}".format(
-                            course1_item, c1_state, course2_item, c2_state
-                        )
+                c1_state = self.compute_real_state(course1_item)
+                c2_state = self.compute_real_state(course2_item)
+                self.assertEqual(
+                    c1_state,
+                    c2_state,
+                    "Course item {} in state {} != course item {} in state {}".format(
+                        course1_item, c1_state, course2_item, c2_state
                     )
+                )
 
             # compare data
             self.assertEqual(hasattr(course1_item, 'data'), hasattr(course2_item, 'data'))
