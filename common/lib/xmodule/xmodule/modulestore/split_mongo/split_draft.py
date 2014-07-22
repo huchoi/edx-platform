@@ -28,14 +28,11 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
 
     def _auto_publish(self, item, user_id, black_list=None):
         """
-        Returns the given item after publishing it if the item.category is DIRECT_ONLY
+        Publishes item if the item.category is DIRECT_ONLY.
+        Returns original item.
         """
         if item.location.category in DIRECT_ONLY_CATEGORIES:
-            try:
-                self.publish(item.location, user_id, black_list=black_list)
-            except ItemNotFoundError:
-                # Course root not published
-                pass
+            self.publish(item.location, user_id, black_list=black_list)
         return item
 
     def update_item(self, descriptor, user_id, allow_not_found=False, force=False):
