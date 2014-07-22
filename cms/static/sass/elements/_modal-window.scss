@@ -366,6 +366,10 @@
     .list-actions {
       @extend %actions-list;
       margin-left: ($baseline/4);
+
+      .action-button {
+        @extend %t-icon4;
+      }
     }
   }
 }
