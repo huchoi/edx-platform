@@ -10,7 +10,7 @@
  */
 define(["jquery", "underscore", "js/views/xblock_outline", "js/views/utils/view_utils",
         "js/models/xblock_outline_info",
-        "js/views/modals/edit_section_in_outline"],
+        "js/views/modals/edit_outline_item"],
     function($, _, XBlockOutlineView, ViewUtils, XBlockOutlineInfo, EditSectionXBlockModal) {
 
         var CourseOutlineView = XBlockOutlineView.extend({

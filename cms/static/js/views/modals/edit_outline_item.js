@@ -21,7 +21,8 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
             },
 
             options: $.extend({}, BaseModal.prototype.options, {
-                modalName: 'edit-xblock',
+                modalName: 'edit-outline-item',
+                modalType: 'edit-settings',
                 addSaveButton: true,
                 modalSize: 'large'
             }),
@@ -29,7 +30,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
             initialize: function() {
                 BaseModal.prototype.initialize.call(this);
                 this.events = _.extend({}, BaseModal.prototype.events, this.events);
-                this.template = this.loadTemplate('edit-section-xblock-modal');
+                this.template = this.loadTemplate('edit-outline-item-modal');
                 this.options.title = this.getTitle();
                 this.initializeComponents();
             },
