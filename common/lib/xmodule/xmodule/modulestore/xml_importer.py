@@ -304,7 +304,8 @@ def import_from_xml(
                         ))
 
                     _import_module_and_update_references(
-                        module, store,
+                        module,
+                        store,
                         user_id,
                         course_key,
                         dest_course_id,
