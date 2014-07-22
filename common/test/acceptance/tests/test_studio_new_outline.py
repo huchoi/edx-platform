@@ -72,19 +72,17 @@ class NewCourseOutline(UniqueCourseTest):
 
     def test_I_get_new_outline_page(self):
         """
-        Go to the new outline page.
+        Verify that I can go to the new outline page.
         """
         self.outline.visit()
 
     def test_I_can_edit_section(self):
         """
-        I can edit section.
+        Verify that I can see section specific edit modal and press save/cancel buttons.
         """
         self.outline.edit_section()
-
-        # chek that modal is section specific
         self.outline.modal_is_shown()
-
+        self.outline.modal_is_section_specific()
         self.outline.press_cancel_on_modal()
 
         self.outline.edit_section()
@@ -93,76 +91,94 @@ class NewCourseOutline(UniqueCourseTest):
 
     def test_I_can_edit_subsection(self):
         """
-        I can edit subsection.
+        Verify that I can see subsection specific edit modal and press save/cancel buttons.
         """
         self.outline.edit_subsection()
         self.outline.modal_is_shown()
-
-        # check that modal is subsection specific
-
+        self.outline.modal_is_subsection_specific()
         self.outline.press_cancel_on_modal()
 
         self.outline.edit_subsection()
         self.outline.modal_is_shown()
         self.outline.press_save_on_modal()
 
-
     def test_I_can_see_release_dates(self):
+        """
+        Verify that I can see release dates in course outline.
+        """
         self.assertTrue(self.outline.release_dates_present())
 
     def test_I_can_edit_release_date_subsection(self):
+        """
+        Verify that I can edit release date of subsection.
+        """
         self.outline.edit_subsection()
         self.outline.modal_is_shown()
         self.assertEqual(self.outline.release_date_in_modal(), u'01/01/70')
         self.outline.set_release_day(12)
         EmptyPromise(
             lambda: self.outline.release_date_in_modal() == u'1/12/1970',
-            "Date is updated"
+            "Release date of subsection is updated in modal."
         ).fulfill()
         self.outline.press_save_on_modal()
         EmptyPromise(
-            lambda: 'Released: Jan 12, 1970' in self.outline.subsection_release_date(),
-            "Date is updated",
+            lambda: 'Released: Jan 12, 1970' in self.outline.subsection_info(),
+            "Release date of subsection is updated in course outline.",
         ).fulfill()
 
-
     def test_I_can_edit_release_date_section(self):
+        """
+        Verify that I can edit release date of section.
+        """
         self.outline.edit_section()
         self.outline.modal_is_shown()
         self.assertEqual(self.outline.release_date_in_modal(), u'01/01/70')
         self.outline.set_release_day(14)
         EmptyPromise(
             lambda: self.outline.release_date_in_modal() == u'1/14/1970',
-            "Date is updated"
+            "Release date of section is updated in modal."
         ).fulfill()
         self.outline.press_save_on_modal()
         EmptyPromise(
             lambda: 'Released: Jan 14, 1970' in self.outline.section_release_date(),
-            "Date is updated",
+            "Release date of section is updated in course outline.",
         ).fulfill()
 
     def test_I_can_edit_due_date(self):
+        """
+        Verify that I can edit due date of subsection.
+        """
         self.outline.edit_subsection()
         self.outline.modal_is_shown()
         self.assertEqual(self.outline.due_date_in_modal(), u'')
         self.outline.set_due_day(21)
         EmptyPromise(
             lambda: self.outline.due_date_in_modal() == u'7/21/2014',
-            "Date is updated"
+            "Due date of subsection is updated in modal."
         ).fulfill()
         self.outline.press_save_on_modal()
         EmptyPromise(
-            lambda: 'Due: Jul 21, 2014' in self.outline.section_due_date(),
-            "Date is updated",
+            lambda: 'Due date: Jul 21, 2014' in self.outline.subsection_info(),
+            "Due date of subsection is updated in course outline.",
         ).fulfill()
 
 
-    # def test_I_can_grade_subsection(self):
-    #     """
-    #     I can grade subsection and see grading format after grading subsection.
-    #     """
-    #     self.outline.edit_subsection()
-    #     self.outline.modal_is_shown()
-    #     import ipdb; ipdb.set_trace()
-
-
+    def test_I_can_grade_subsection(self):
+        """
+        Verify that I can grade subsection and see grading format in course outline.
+        """
+        self.outline.edit_subsection()
+        self.outline.modal_is_shown()
+        self.assertTrue(self.outline.is_grading_format_selected('notgraded'))
+        self.outline.select_grading_format('Lab')
+        self.assertTrue(self.outline.is_grading_format_selected('Lab'))
+        self.outline.set_due_day(21)
+        EmptyPromise(
+            lambda: self.outline.due_date_in_modal() == u'7/21/2014',
+            "Due date of subsection is updated in modal."
+        ).fulfill()
+        self.outline.press_save_on_modal()
+        EmptyPromise(
+            lambda: 'Policy: Lab' in self.outline.subsection_info(),
+            "Grading format of subsection is updated in course outline.",
+        ).fulfill()
