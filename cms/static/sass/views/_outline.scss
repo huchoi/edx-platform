@@ -511,6 +511,11 @@
   // ------------------------
   .edit-outline-item-modal {
 
+    // resetting padding for this case on modal content
+    .modal-content {
+      padding: $baseline;
+    }
+
     .list-fields {
       margin-bottom: $baseline;
 
@@ -523,6 +528,7 @@
         display: inline-block;
         vertical-align: top;
         margin-right: ($baseline/2);
+        margin-bottom: ($baseline/2);
 
 
         // TODO: refactor the _forms.scss partial to allow for this area to inherit from it
@@ -571,6 +577,10 @@
 
         .label {
           margin-right: ($baseline/2);
+        }
+
+        .input {
+          width: 100%;
         }
       }
     }
