@@ -103,6 +103,6 @@ define(["jquery", "underscore", "gettext", "js/views/utils/view_utils", "js/util
             'addXBlock': addXBlock,
             'deleteXBlock': deleteXBlock,
             'updateXBlockField': updateXBlockField,
-            'updateXBlockFields': updateXBlockFields,
+            'updateXBlockFields': updateXBlockFields
         };
     });
