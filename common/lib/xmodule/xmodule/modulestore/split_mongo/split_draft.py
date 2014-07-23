@@ -96,10 +96,9 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
             raise ValueError('revision not one of None, ModuleStoreEnum.RevisionOption.published_only, or ModuleStoreEnum.RevisionOption.all')
         for branch in branches_to_delete:
             branched_location = location.for_branch(branch)
-            SplitMongoModuleStore.delete_item(self, branched_location, user_id, **kwargs)
             parent_loc = self.get_parent_location(branched_location)
-            self._auto_publish(branched_location, branched_location.category)
-            self._auto_publish(parent_loc, branched_location.category, black_list=EXCLUDE_ALL)
+            SplitMongoModuleStore.delete_item(self, branched_location, user_id, **kwargs)
+            self._auto_publish(parent_loc, branched_location.category, user_id, black_list=EXCLUDE_ALL)
 
     def _map_revision_to_branch(self, key, revision=None):
         """
