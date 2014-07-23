@@ -43,18 +43,26 @@
             <% if (xblockInfo.get('edited_on')) { %>
                 <div class="meta-info">
                     <% if (xblockInfo.get('published')) { %>
-                        <i class="icon-check"></i>
-                        <%= gettext('Released:') %> <%= xblockInfo.get('release_date') %>
+                        <span class="release-date">
+                            <i class="icon-check"></i>
+                            <%= gettext('Released:') %> <%= xblockInfo.get('release_date') %>
+                        </span>
                     <% } else { %>
-                        <i class="icon-time"></i>
-                        <%= gettext('Scheduled:') %> <%= xblockInfo.get('release_date') %>
+                        <span class="schedule">
+                            <i class="icon-time"></i>
+                            <%= gettext('Scheduled:') %> <%= xblockInfo.get('release_date') %>
+                        </span>
                     <% } %>
                     <% if (xblockInfo.get('due_date')) { %>
-                        <i class="icon-time"></i>
-                        <%= gettext('Due date:') %> <%= xblockInfo.get('due_date') %>
+                        <span class="due-date">
+                            <i class="icon-time"></i>
+                            <%= gettext('Due date:') %> <%= xblockInfo.get('due_date') %>
+                        </span>
                     <% } %>
                     <% if (xblockInfo.get('format')) { %>
-                        <%= gettext('Policy:') %> <%= xblockInfo.get('format')  ? xblockInfo.get('format')  : gettext('Not Graded') %>
+                        <span class="policy">
+                            <%= gettext('Policy:') %> <%= xblockInfo.get('format')  ? xblockInfo.get('format')  : gettext('Not Graded') %>
+                        </span>
                     <% } %>
                 </div>
             <% } %>

@@ -1,8 +1,12 @@
 """
 Course Outline page in Studio.
 """
+import datetime
+
 from bok_choy.page_object import PageObject
 from bok_choy.promise import EmptyPromise
+
+from selenium.webdriver.support.ui import Select
 
 from .course_page import CoursePage
 from .container import ContainerPage
@@ -17,6 +21,7 @@ class CourseOutlineItem(object):
     EDIT_BUTTON_SELECTOR = '.xblock-title .xblock-field-value-edit'
     NAME_SELECTOR = '.xblock-title .xblock-field-value'
     NAME_INPUT_SELECTOR = '.xblock-title .xblock-field-input'
+    CONFIGURATION_BUTTON_SELECTOR = '.item-actions .configure-button'
 
     def __repr__(self):
         return "{}(<browser>, {!r})".format(self.__class__.__name__, self.locator)
@@ -49,6 +54,24 @@ class CourseOutlineItem(object):
         self.q(css=self._bounded_selector(self.EDIT_BUTTON_SELECTOR)).first.click()
         set_input_value_and_save(self, self._bounded_selector(self.NAME_INPUT_SELECTOR), new_name)
         self.wait_for_ajax()
+
+    def edit(self):
+        self.q(css=self._bounded_selector(self.CONFIGURATION_BUTTON_SELECTOR)).first.click()
+        modal = ItemOutlineModal(self)
+        EmptyPromise(lambda: modal.is_shown(), 'Modal is shown.')
+        return modal
+
+    @property
+    def release_date(self):
+        return self.q(css=self._bounded_selector(".release-date")).first.text[0]
+
+    @property
+    def due_date(self):
+        return self.q(css=self._bounded_selector(".due-date")).first.text[0]
+
+    @property
+    def policy(self):
+        return self.q(css=self._bounded_selector(".policy")).first.text[0]
 
 
 class CourseOutlineContainer(CourseOutlineItem):
@@ -191,3 +214,104 @@ class CourseOutlinePage(CoursePage, CourseOutlineContainer):
         Returns the :class:`.CourseOutlineSection` at the specified index.
         """
         return self.child_at(index)
+
+
+class ItemOutlineModal(object):
+    MODAL_SELECTOR = ".edit-outline-item-modal"
+
+    def __init__(self, page):
+        self.page = page
+
+    def _bounded_selector(self, selector):
+        """
+        Returns `selector`, but limited to this particular `ItemOutlineModal` context.
+        """
+        return " ".join([self.MODAL_SELECTOR, selector])
+
+    def is_shown(self):
+        return self.page.q(css=self.MODAL_SELECTOR).present
+
+    def find_css(self, selector):
+        return self.page.q(css=self._bounded_selector(selector))
+
+    def click(self, selector, index=0):
+        self.find_css(selector).nth(index).click()
+
+    def save(self):
+        self.click(".action-save")
+        self.page.wait_for_ajax()
+
+    def cancel(self):
+        self.click(".action-cancel")
+
+    def has_release_date(self):
+        return self.find_css("#start_date").present
+
+    def has_due_date(self):
+        return self.find_css("#due_date").present
+
+    def has_grading_type(self):
+        return self.find_css("#grading_type").present
+
+    @property
+    def release_date(self):
+        return self.find_css("#start_date").first.attrs('value')[0]
+
+    @release_date.setter
+    def release_date(self, day_number):
+        self.click("#start_date")
+        self.page.q(css="a.ui-state-default").nth(day_number - 1).click()
+        EmptyPromise(
+            lambda: self.release_date == u'1/{}/1970'.format(day_number),
+            "Release date is updated in modal."
+        ).fulfill()
+
+    @property
+    def due_date(self):
+        return self.find_css("#due_date").first.attrs('value')[0]
+
+    @due_date.setter
+    def due_date(self, day_number):
+        now = datetime.datetime.now()
+        self.click("#due_date")
+        self.page.q(css="a.ui-state-default").nth(day_number - 1).click()
+        EmptyPromise(
+            lambda: self.due_date == '{}/{}/{}'.format(now.month, day_number, now.year),
+            "Due date is updated in modal."
+        ).fulfill()
+
+    @property
+    def policy(self):
+        """
+        Select the grading format with `value` in the drop-down list.
+        """
+        element = self.find_css('#grading_type')[0]
+        return self.get_selected_option_text(element)
+
+    @policy.setter
+    def policy(self, grading_label):
+        """
+        Select the grading format with `value` in the drop-down list.
+        """
+        element = self.find_css('#grading_type')[0]
+        select = Select(element)
+        select.select_by_visible_text(grading_label)
+
+        EmptyPromise(
+            lambda: self.policy == grading_label,
+            "Grading label is updated.",
+        ).fulfill()
+
+    def is_grading_label_selected(self, grading_label):
+        element = self.find_css('#grading_type')[0]
+        return self.get_selected_option_text(element) == grading_label
+
+    def get_selected_option_text(self, element):
+        """
+        Returns the text of the first selected option for the select with given label (display name).
+        """
+        if element:
+            select = Select(element)
+            return select.first_selected_option.text
+        else:
+            return None
