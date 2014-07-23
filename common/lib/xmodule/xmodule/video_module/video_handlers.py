@@ -198,9 +198,12 @@ class VideoStudentViewHandlers(object):
             asset_path = None
             if hasattr(self.descriptor.runtime, 'modulestore'):
                 course = self.descriptor.runtime.modulestore.get_course(self.course_id)
-                asset_path = course.static_asset_path
+                if course.static_asset_path:
+                    asset_path = course.static_asset_path
+                else:
+                    # It seems static_asset_path is not set in some xml courses.
+                    asset_path = getattr(course, 'data_dir', '')
             else:
-                # Handle XML Courses that don't have modulestore in the runtime
                 asset_path = getattr(self.descriptor, 'data_dir', None)
 
             if asset_path:
@@ -251,7 +254,7 @@ class VideoStudentViewHandlers(object):
 
             try:
                 transcript = self.translation(request.GET.get('videoId', None))
-            except NotFoundError, ex:
+            except (TypeError, NotFoundError) as ex:
                 log.info(ex.message)
                 # Try to return static URL redirection as last resort
                 # if no translation is required
