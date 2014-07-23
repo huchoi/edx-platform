@@ -14,13 +14,13 @@
             <div class="modal-section-content has-actions">
                 <ul class="list-fields list-input datepair">
                     <li class="field field-text field-start-date field-release-date">
-                        <label for="start_date" class="label"><%= gettext('Release Day') %></label>
+                        <label for="start_date" class="label"><%= gettext('Release Date:') %></label>
                         <input type="text" id="start_date" name="start_date"
                           value=""
                           placeholder="MM/DD/YYYY" class="start-date release-date date input input-text" autocomplete="off" />
                     </li>
                     <li class="field field-text field-start-time field-release-time">
-                        <label for="start_time" class="label"><%= gettext('Release Time in UTC') %> (<abbr title="<%= gettext('Coordinated Universal Time') %>"><%= gettext('UTC') %></abbr>)</label>
+                        <label for="start_time" class="label"><%= gettext('Release Time in UTC:') %></label>
                         <input type="text" id="start_time" name="start_time"
                           value=""
                           placeholder="HH:MM" class="start-time release-time time input input-text" autocomplete="off" />
@@ -61,14 +61,14 @@
               <div class="modal-section-content has-actions due-date-input grading-due-date">
                   <ul class="list-fields list-input datepair date-setter">
                       <li class="field field-text field-due-date">
-                          <label for="due_date"><%= gettext('Due Date') %></label>
+                          <label for="due_date"><%= gettext('Due Date:') %></label>
                           <input type="text" id="due_date" name="due_date"
                             value=""
                           placeholder="MM/DD/YYYY" class="date input input-text" autocomplete="off"/>
                       </li>
 
                       <li class="field field-text field-due-time">
-                          <label for="due_time"><%= gettext('Due Time in UTC') %> (<abbr title="<%= gettext('Coordinated Universal Time') %>"><%= gettext('UTC') %></abbr>)</label>
+                          <label for="due_time"><%= gettext('Due Time in UTC:') %></label>
                           <input type="text" id="due_time" name="due_time"
                           value=""
                           placeholder="HH:MM" class="time input input-text" autocomplete="off" />
