@@ -45,8 +45,8 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     }
                 };
             };
-            createMockSubsectionJSON = function(id, displayName, children) {
-                return {
+            createMockSubsectionJSON = function(id, displayName, children, editing_information) {
+                var result = {
                     id: id,
                     display_name: displayName,
                     category: 'sequential',
@@ -56,12 +56,19 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     published: true,
                     edited_on: 'Jul 02, 2014 at 20:56 UTC',
                     edited_by: 'MockUser',
+                    course_graders: '["Lab", "Howework"]',
                     child_info: {
                         category: 'vertical',
                         display_name: 'Unit',
                         children: children
                     }
                 };
+                if (editing_information) {
+                    result.graded = true;
+                    result.due_date = 'Jul 09, 2014 at 00:00 UTC';
+                    result.release_date = 'Jan 01, 2970 at 05:00 UTC';
+                };
+                return result;    
             };
 
             getHeaderElement = function(selector) {
@@ -99,6 +106,10 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                 view_helpers.installViewTemplates();
                 view_helpers.installTemplate('course-outline');
                 view_helpers.installTemplate('xblock-string-field-editor');
+                view_helpers.installTemplate('edit-outline-item-modal');
+                view_helpers.installTemplate('modal-button');
+                view_helpers.installTemplate('basic-modal');
+                view_helpers.installTemplate('edit-outline-item-modal');
                 appendSetFixtures(mockOutlinePage);
                 mockCourseJSON = createMockCourseJSON('mock-course', 'Mock Course', [
                     createMockSectionJSON('mock-section', 'Mock Section', [
@@ -199,6 +210,11 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     outlinePage.$('.nav-actions .toggle-button-expand-collapse').click();
                     expect(outlinePage.$('.outline-item-section')).not.toHaveClass('collapsed');
                 });
+
+
+                // TODO check that seciton contains only release date
+
+
             });
 
             describe("Empty course", function() {
@@ -402,6 +418,43 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     collapseAndVerifyState('.outline-item-subsection');
                     expandAndVerifyState('.outline-item-subsection');
                 });
+
+                it('can be edited', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-item-subsection .configure-button').click();
+                    $("#start_date").val("7/9/2014");
+                    $("#due_date").val("7/10/2014");
+                    $("#grading_type").val("Lab");
+                    $(".edit-outline-item-modal .action-save").click()
+                    create_sinon.expectJsonRequest(requests, 'POST', '/xblock/mock-subsection', {
+                        "graderType":"Lab",
+                        "metadata":{
+                            "start":"2014-07-09T00:00:00.000Z",
+                            "due":"2014-07-10T00:00:00.000Z"
+                        }
+                    });
+                    var mockResponseCourseJSON = createMockCourseJSON('mock-course', 'Mock Course', [
+                            createMockSectionJSON('mock-section', 'Mock Section', [
+                                createMockSubsectionJSON('mock-subsection', 'Mock Subsection', [{
+                                    id: 'mock-unit',
+                                    display_name: 'Mock Unit',
+                                    category: 'vertical',
+                                    studio_url: '/container/mock-unit',
+                                    is_container: true,
+                                    has_changes: true,
+                                    published: false,
+                                    edited_on: 'Jul 02, 2014 at 20:56 UTC',
+                                    edited_by: 'MockUser'
+                                }
+                            ], true)
+                        ])
+                    ]);
+                    // actual response does not matter, as it is does not used, but then goes refresh,
+                    // and it is contains new JSON
+                    create_sinon.respondWithJson(requests, mockResponseCourseJSON);
+                    // check that release date is updated 
+                    // debugger;
+                });
             });
 
             // Note: most tests for units can be found in Bok Choy
@@ -426,6 +479,8 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     anchor = outlinePage.$('.outline-item-unit .xblock-title a');
                     expect(anchor.attr('href')).toBe('/container/mock-unit');
                 });
+
+                // TODO check that unit is not editable
             });
         });
     });
