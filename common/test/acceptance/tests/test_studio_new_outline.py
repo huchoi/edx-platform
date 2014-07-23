@@ -9,10 +9,13 @@ from ..pages.studio.overview import CourseOutlinePage
 from ..pages.studio.new_outline import NewCourseOutlinePage
 from ..fixtures.course import CourseFixture, XBlockFixtureDesc
 
-from .helpers import UniqueCourseTest
+from .helpers import UniqueCourseTest, load_data_str
 from ..pages.studio.component_editor import ComponentEditorView
 from ..pages.studio.utils import add_discussion
 from ..pages.lms.courseware import CoursewarePage
+from ..pages.lms.course_page import CoursePage
+from ..pages.lms.progress import ProgressPage
+from ..pages.lms.course_info import CourseInfoPage
 
 from unittest import skip
 from bok_choy.promise import Promise, EmptyPromise
@@ -61,13 +64,17 @@ class NewCourseOutline(UniqueCourseTest):
         course_fix.add_children(
             XBlockFixtureDesc('chapter', 'Test Section').add_children(
                 XBlockFixtureDesc('sequential', 'Test Subsection').add_children(
-                    XBlockFixtureDesc('vertical', 'Test Unit')
+                    XBlockFixtureDesc('vertical', 'Test Unit').add_children(
+                        XBlockFixtureDesc('problem', 'Test Problem 1', data=load_data_str('multiple_choice.xml')),
+                    )
                 )
             )
         ).install()
         self.course_fix = course_fix
         session = course_fix.session  # Need to initialize session in order to get user.
         self.user = course_fix.user
+        self.progress_page = ProgressPage(self.browser, self.course_id)
+        self.course_info_page = CourseInfoPage(self.browser, self.course_id)
 
 
     def test_I_get_new_outline_page(self):
@@ -182,3 +189,31 @@ class NewCourseOutline(UniqueCourseTest):
             lambda: 'Policy: Lab' in self.outline.subsection_info(),
             "Grading format of subsection is updated in course outline.",
         ).fulfill()
+
+    def test_I_can_grade_subsection_wo_due_date(self):
+        """
+        Verify that I can grade subsection w/o setting due date 
+        and see grading format in course outline.
+        """
+        self.outline.edit_subsection()
+        self.outline.modal_is_shown()
+        self.assertTrue(self.outline.is_grading_format_selected('notgraded'))
+        self.outline.select_grading_format('Lab')
+        self.assertTrue(self.outline.is_grading_format_selected('Lab'))
+        self.outline.press_save_on_modal()
+        EmptyPromise(
+            lambda: 'Policy: Lab' in self.outline.subsection_info(),
+            "Grading format of subsection is updated in course outline.",
+        ).fulfill()
+
+
+    def test_I_can_grade_subsection_and_subsection_is_graded(self):
+        """
+        Verify that I can grade subsection and it is graded in LMS.
+        """
+        self.progress_page.visit()
+        self.assertTrue(u'Practice Scores:', self.progress_page.q(css="div.scores h3").text[0])
+        self.outline.visit()
+        self.test_I_can_grade_subsection()
+        self.progress_page.visit()
+        self.assertTrue(u'Problem Scores:', self.progress_page.q(css="div.scores h3").text[0])
