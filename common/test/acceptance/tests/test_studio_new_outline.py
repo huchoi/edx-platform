@@ -121,7 +121,7 @@ class NewCourseOutline(UniqueCourseTest):
         """
         self.outline.edit_subsection()
         self.outline.modal_is_shown()
-        self.assertEqual(self.outline.release_date_in_modal(), u'01/01/70')
+        self.assertEqual(self.outline.release_date_in_modal(), u'1/1/1970')
         self.outline.set_release_day(12)
         EmptyPromise(
             lambda: self.outline.release_date_in_modal() == u'1/12/1970',
@@ -139,7 +139,7 @@ class NewCourseOutline(UniqueCourseTest):
         """
         self.outline.edit_section()
         self.outline.modal_is_shown()
-        self.assertEqual(self.outline.release_date_in_modal(), u'01/01/70')
+        self.assertEqual(self.outline.release_date_in_modal(), u'1/1/1970')
         self.outline.set_release_day(14)
         EmptyPromise(
             lambda: self.outline.release_date_in_modal() == u'1/14/1970',
