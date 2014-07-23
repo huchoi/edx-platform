@@ -3,7 +3,7 @@ Module for the dual-branch fall-back Draft->Published Versioning ModuleStore
 """
 
 from ..exceptions import ItemNotFoundError
-from split import SplitMongoModuleStore
+from split import SplitMongoModuleStore, EXCLUDE_ALL
 from xmodule.modulestore import ModuleStoreEnum, PublishState
 from xmodule.modulestore.draft_and_published import ModuleStoreDraftAndPublished, DIRECT_ONLY_CATEGORIES
 
@@ -18,7 +18,8 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
         item = super(DraftVersioningModuleStore, self).create_course(
             org, course, run, user_id, master_branch=master_branch, **kwargs
         )
-        return self._auto_publish(item, user_id)
+        self._auto_publish(item.location, item.location.category, user_id)
+        return item
 
     def get_courses(self):
         """
@@ -26,14 +27,12 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
         """
         return super(DraftVersioningModuleStore, self).get_courses(ModuleStoreEnum.BranchName.draft)
 
-    def _auto_publish(self, item, user_id, black_list=None):
+    def _auto_publish(self, location, category, user_id, black_list=None):
         """
-        Publishes item if the item.category is DIRECT_ONLY.
-        Returns original item.
+        Publishes item if the category is DIRECT_ONLY.
         """
-        if item.location.category in DIRECT_ONLY_CATEGORIES:
-            self.publish(item.location, user_id, black_list=black_list)
-        return item
+        if category in DIRECT_ONLY_CATEGORIES:
+            self.publish(location, user_id, black_list=black_list)
 
     def update_item(self, descriptor, user_id, allow_not_found=False, force=False):
         item = super(DraftVersioningModuleStore, self).update_item(
@@ -46,7 +45,8 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
         black_list = None
         if hasattr(item, 'children'):
             black_list = item.children
-        return self._auto_publish(item, user_id, black_list=black_list)
+        self._auto_publish(item.location, item.location.category, user_id, black_list=black_list)
+        return item
 
     def create_item(
         self, user_id, course_key, block_type, block_id=None,
@@ -58,7 +58,8 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
             definition_locator=definition_locator, fields=fields,
             force=force, continue_version=continue_version, **kwargs
         )
-        return self._auto_publish(item, user_id)
+        self._auto_publish(item.location, item.location.category, user_id)
+        return item
 
     def create_child(
             self, user_id, parent_usage_key, block_type, block_id=None,
@@ -68,7 +69,8 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
             user_id, parent_usage_key, block_type, block_id=block_id,
             fields=fields, continue_version=False, **kwargs
         )
-        return self._auto_publish(item, user_id)
+        self._auto_publish(parent_usage_key, item.location.category, user_id, black_list=EXCLUDE_ALL)
+        return item
 
     def delete_item(self, location, user_id, revision=None, **kwargs):
         """
@@ -93,7 +95,11 @@ class DraftVersioningModuleStore(ModuleStoreDraftAndPublished, SplitMongoModuleS
         else:
             raise ValueError('revision not one of None, ModuleStoreEnum.RevisionOption.published_only, or ModuleStoreEnum.RevisionOption.all')
         for branch in branches_to_delete:
-            SplitMongoModuleStore.delete_item(self, location.for_branch(branch), user_id, **kwargs)
+            branched_location = location.for_branch(branch)
+            SplitMongoModuleStore.delete_item(self, branched_location, user_id, **kwargs)
+            parent_loc = self.get_parent_location(branched_location)
+            self._auto_publish(branched_location, branched_location.category)
+            self._auto_publish(parent_loc, branched_location.category, black_list=EXCLUDE_ALL)
 
     def _map_revision_to_branch(self, key, revision=None):
         """
