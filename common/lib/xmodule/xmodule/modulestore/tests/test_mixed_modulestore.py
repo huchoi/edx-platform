@@ -364,12 +364,13 @@ class TestMixedModuleStore(unittest.TestCase):
         # Change the component, then check that there now are changes
         component = self.store.get_item(xblock.location)
         component.display_name = 'Changed Display Name'
-        self.store.update_item(component, self.user_id)
-        self.assertTrue(self.store.has_changes(xblock.location))
+
+        component = self.store.update_item(component, self.user_id)
+        self.assertTrue(self.store.has_changes(component.location))
 
         # Publish and verify again
-        self.store.publish(xblock.location, self.user_id)
-        self.assertFalse(self.store.has_changes(xblock.location))
+        self.store.publish(component.location, self.user_id)
+        self.assertFalse(self.store.has_changes(component.location))
 
     @ddt.data('draft', 'split')
     def test_has_changes_missing_child(self, default_ms):
@@ -463,7 +464,7 @@ class TestMixedModuleStore(unittest.TestCase):
                 revision=ModuleStoreEnum.RevisionOption.draft_preferred
             )
 
-        self.store.publish(private_vert.location, self.user_id)
+        self.store.publish(private_vert.location.version_agnostic(), self.user_id)
         private_leaf.display_name = 'change me'
         private_leaf = self.store.update_item(private_leaf, self.user_id)
         # test succeeds if delete succeeds w/o error
@@ -539,7 +540,7 @@ class TestMixedModuleStore(unittest.TestCase):
         self._create_block_hierarchy()
 
         # publish the course
-        self.store.publish(self.course.location, self.user_id)
+        self.course = self.store.publish(self.course.location.version_agnostic(), self.user_id)
 
         # make drafts of verticals
         self.store.convert_to_draft(self.vertical_x1a, self.user_id)
@@ -565,7 +566,7 @@ class TestMixedModuleStore(unittest.TestCase):
         ])
 
         # publish the course again
-        self.store.publish(self.course.location, self.user_id)
+        self.store.publish(self.course.location.version_agnostic(), self.user_id)
         self.verify_get_parent_locations_results([
             (child_to_move_location, new_parent_location, None),
             (child_to_move_location, new_parent_location, ModuleStoreEnum.RevisionOption.draft_preferred),
@@ -773,7 +774,7 @@ class TestMixedModuleStore(unittest.TestCase):
         self._create_block_hierarchy()
 
         # publish
-        self.store.publish(self.course.location, self.user_id)
+        self.store.publish(self.course.location.version_agnostic(), self.user_id)
         published_xblock = self.store.get_item(
             self.vertical_x1a,
             revision=ModuleStoreEnum.RevisionOption.published_only
