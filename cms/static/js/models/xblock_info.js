@@ -91,14 +91,17 @@ function(Backbone, _, str, ModuleUtils) {
              */
             'course_graders': null,
             /**
-             *
+             * Whether this xblock contributes to the final course grade.
              */
             'graded': null,
-        },
-
-        conversions: {
-            'release_date': 'start',
-            'due_date': 'due'
+            /**
+             * The same as `release_date` but as an ISO-formatted date string.
+             */
+            'start': null,
+            /**
+             * The same as `due_date` but as an ISO-formatted date string.
+             */
+            'due': null
         },
 
         initialize: function () {
@@ -115,25 +118,6 @@ function(Backbone, _, str, ModuleUtils) {
             }
 
             return response;
-        },
-
-        /*
-         * Uses `conversions` property to harmonize fields between the client and
-         * server.
-         * @param {Object} Client fields.
-         * @return {Object}
-         */
-        convertFieldNames: function(metadata) {
-            var result = {};
-
-            _.each(metadata, function (value, fieldName) {
-                if (_.has(this.conversions, fieldName)) {
-                    fieldName = this.conversions[fieldName];
-                }
-                result[fieldName] = value;
-            }, this);
-
-          return result;
         },
 
         parseXBlockInfoList: function(list) {

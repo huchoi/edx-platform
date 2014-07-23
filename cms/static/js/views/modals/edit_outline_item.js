@@ -4,8 +4,7 @@
  * and upon save an optional refresh function can be invoked to update the display.
  */
 define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_modal',
-    'date', 'js/views/utils/xblock_utils',
-    'js/utils/get_date'
+    'date', 'js/views/utils/xblock_utils', 'js/utils/date_utils'
 ],
     function(
         $, Backbone, _, gettext, BaseModal, date, XBlockViewUtils, DateUtils
@@ -57,7 +56,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
             save: function(event) {
                 event.preventDefault();
                 var requestData = _.extend({}, this.getRequestData(), {
-                    metadata: this.model.convertFieldNames(this.getMetadata())
+                    metadata: this.getMetadata()
                 });
                 XBlockViewUtils.updateXBlockFields(
                     this.model, requestData, true
@@ -74,7 +73,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
             invokeComponentMethod: function (methodName) {
                 var values = _.map(this.components, function (component) {
                     if (_.isFunction(component[methodName])) {
-                        return component[methodName]();
+                        return component[methodName].call(component);
                     }
                 });
 
@@ -138,43 +137,34 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
         });
 
         BaseDateView = Backbone.View.extend({
+            // Attribute name in the model
+            fieldName: null,
+
             events : {
                 'click .clear-date': 'clearValue'
             },
 
             afterRender: function () {
-                this.setElement(this.options.parentView.$(this.options.selector));
-                this.$('.date').datepicker({'dateFormat': 'm/d/yy'});
-                this.$('.time').timepicker({'timeFormat' : 'H:i'});
-            },
-
-            getDateTime: function(datetime) {
-                // @TODO fix for i18n. Can we get Date in appropriate  format
-                // from the server?
-                datetime = datetime.split(' at ');
-                return {
-                    'date': date.parse(datetime[0]).toString('MM/dd/yy'),
-                    // @TODO Fix `.split('UTC')` for i18n. Can we get Date in
-                    // appropriate  format from the server?
-                    'time': date.parse(datetime[1].split('UTC')[0]).toString('hh:mm')
-                };
-            },
-
-            processDate: function (value) {
-                if (value) {
-                    return this.getDateTime(value);
-                } else {
-                    return {
-                        time: null,
-                        date: null
-                    };
+                this.setElement(this.options.parentView.$(this.options.selector).get(0));
+                this.$('input.date').datepicker({'dateFormat': 'm/d/yy'});
+                this.$('input.time').timepicker({
+                    'timeFormat' : 'H:i',
+                    'forceRoundTime': true
+                });
+                if (this.model.get(this.fieldName)) {
+                    DateUtils.setDate(
+                        this.$('input.date'), this.$('input.time'),
+                        this.model.get(this.fieldName)
+                    );
                 }
             }
         });
 
         DueDateView = BaseDateView.extend({
+            fieldName: 'due',
+
             getValue: function () {
-                return DateUtils(this.$('#due_date'), this.$('#due_time'));
+                return DateUtils.getDate(this.$('#due_date'), this.$('#due_time'));
             },
 
             clearValue: function (event) {
@@ -184,20 +174,16 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
 
             getMetadata: function () {
                 return {
-                    'due_date': this.getValue()
-                };
-            },
-
-            getContext: function () {
-                return {
-                    dueDate: this.processDate(this.model.get('due_date'))
+                    'due': this.getValue()
                 };
             }
         });
 
         ReleaseDateView = BaseDateView.extend({
+            fieldName: 'start',
+
             getValue: function () {
-                return DateUtils(this.$('#start_date'), this.$('#start_time'));
+                return DateUtils.getDate(this.$('#start_date'), this.$('#start_time'));
             },
 
             clearValue: function (event) {
@@ -207,20 +193,14 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
 
             getMetadata: function () {
                 return {
-                    'release_date': this.getValue()
-                };
-            },
-
-            getContext: function () {
-                return {
-                    releaseDate: this.processDate(this.model.get('release_date'))
+                    'start': this.getValue()
                 };
             }
         });
 
         GradingView = Backbone.View.extend({
             afterRender: function () {
-                this.setElement(this.options.parentView.$(this.options.selector));
+                this.setElement(this.options.parentView.$(this.options.selector).get(0));
                 this.setValue(this.model.get('format'));
             },
 
