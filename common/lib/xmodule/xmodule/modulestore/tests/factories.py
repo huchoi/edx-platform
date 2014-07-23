@@ -227,23 +227,42 @@ def check_mongo_calls(mongo_store, max_finds=0, max_sends=None):
     end of the with statement, it compares the counts to the max_finds and max_sends using a simple
     assertLessEqual.
 
-    :param mongo_store: the MongoModulestore or subclass to watch
+    Note, it only instruments the given collection for finds but the whole connection for sends (for all
+    collections on that db connection)
+
+    :param mongo_store: the MongoModulestore or subclass to watch or a SplitMongoModuleStore
     :param max_finds: the maximum number of find calls to allow
     :param max_sends: If none, don't instrument the send calls. If non-none, count and compare to
         the given int value.
     """
+    if mongo_store.get_modulestore_type() == ModuleStoreEnum.Type.mongo:
+        collections = [mongo_store.collection]
+        connection = mongo_store.database.connection
+    elif mongo_store.get_modulestore_type() == ModuleStoreEnum.Type.split:
+        collections = [
+            mongo_store.db_connection.course_index,
+            mongo_store.db_connection.structures,
+            mongo_store.db_connection.definitions,
+        ]
+        connection = mongo_store.db_connection.database.connection
+    # could add else clause which raises exception or just rely on the below to suss that out
     try:
-        find_wrap = Mock(wraps=mongo_store.collection.find)
-        wrap_patch = patch.object(mongo_store.collection, 'find', find_wrap)
-        wrap_patch.start()
+        find_wraps = []
+        wrap_patches = []
+        for collection in collections:
+            find_wrap = Mock(wraps=collection.find)
+            find_wraps.append(find_wrap)
+            wrap_patch = patch.object(collection, 'find', find_wrap)
+            wrap_patches.append(wrap_patch)
+            wrap_patch.start()
         if max_sends:
-            sends_wrap = Mock(wraps=mongo_store.database.connection._send_message)
-            sends_patch = patch.object(mongo_store.database.connection, '_send_message', sends_wrap)
+            sends_wrap = Mock(wraps=connection._send_message)
+            sends_patch = patch.object(connection, '_send_message', sends_wrap)
             sends_patch.start()
         yield
     finally:
-        wrap_patch.stop()
+        map(lambda wrap_patch: wrap_patch.stop(), wrap_patches)
         if max_sends:
             sends_patch.stop()
             assert_less_equal(sends_wrap.call_count, max_sends)
-        assert_less_equal(find_wrap.call_count, max_finds)
+        assert_less_equal(sum([find_wrap.call_count for find_wrap in find_wraps]), max_finds)

@@ -1,7 +1,6 @@
 import pymongo
 from uuid import uuid4
 import ddt
-from mock import patch
 from importlib import import_module
 from collections import namedtuple
 import unittest
@@ -18,6 +17,7 @@ from opaque_keys.edx.locator import BlockUsageLocator, CourseLocator
 # before importing the module
 # TODO remove this import and the configuration -- xmodule should not depend on django!
 from django.conf import settings
+from xmodule.modulestore.tests.factories import check_mongo_calls
 if not settings.configured:
     settings.configure()
 from xmodule.modulestore.mixed import MixedModuleStore
@@ -243,17 +243,22 @@ class TestMixedModuleStore(unittest.TestCase):
             SlashSeparatedCourseKey('foo', 'bar', '2012_Fall')), mongo_ms_type
         )
 
-    @ddt.data('draft', 'split')
-    def test_has_item(self, default_ms):
+    # split has one lookup for the course and then one for the course items
+    @ddt.data(('draft', 1, 0), ('split', 2, 0))
+    @ddt.unpack
+    def test_has_item(self, default_ms, max_find, max_send):
         self.initdb(default_ms)
+        mongo_store = self.store._get_modulestore_for_courseid(self._course_key_from_string(self.MONGO_COURSEID))
         for course_locn in self.course_locations.itervalues():  # pylint: disable=maybe-no-member
-            self.assertTrue(self.store.has_item(course_locn))
+            with check_mongo_calls(mongo_store, max_find, max_send):
+                self.assertTrue(self.store.has_item(course_locn))
 
         # try negative cases
         self.assertFalse(self.store.has_item(
             self.course_locations[self.XML_COURSEID1].replace(name='not_findable', category='problem')
         ))
-        self.assertFalse(self.store.has_item(self.fake_location))
+        with check_mongo_calls(mongo_store, max_find, max_send):
+            self.assertFalse(self.store.has_item(self.fake_location))
 
     @ddt.data('draft', 'split')
     def test_get_item(self, default_ms):
