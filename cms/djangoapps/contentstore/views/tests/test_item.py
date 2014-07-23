@@ -1165,6 +1165,7 @@ class TestXBlockInfo(ItemTest):
         self.assertEqual(xblock_info['category'], 'chapter')
         self.assertEqual(xblock_info['id'], 'i4x://MITx/999/chapter/Week_1')
         self.assertEqual(xblock_info['display_name'], 'Week 1')
+        self.assertEqual(xblock_info['course_graders'], '["Homework", "Lab", "Midterm Exam", "Final Exam"]')
         self.assertTrue(xblock_info['published'])
         self.assertEqual(xblock_info['edited_by'], 'testuser')
 
