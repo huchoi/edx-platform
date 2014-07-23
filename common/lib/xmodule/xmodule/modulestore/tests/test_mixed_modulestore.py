@@ -260,36 +260,67 @@ class TestMixedModuleStore(unittest.TestCase):
         with check_mongo_calls(mongo_store, max_find, max_send):
             self.assertFalse(self.store.has_item(self.fake_location))
 
-    @ddt.data('draft', 'split')
-    def test_get_item(self, default_ms):
+    # draft is 2 to compute inheritance
+    # split is 3 b/c it looks up the wiki_slug in definitions
+    @ddt.data(('draft', 2, 0), ('split', 3, 0))
+    @ddt.unpack
+    def test_get_item(self, default_ms, max_find, max_send):
         self.initdb(default_ms)
+        mongo_store = self.store._get_modulestore_for_courseid(self._course_key_from_string(self.MONGO_COURSEID))
         for course_locn in self.course_locations.itervalues():  # pylint: disable=maybe-no-member
-            self.assertIsNotNone(self.store.get_item(course_locn))
+            with check_mongo_calls(mongo_store, max_find, max_send):
+                self.assertIsNotNone(self.store.get_item(course_locn))
 
         # try negative cases
         with self.assertRaises(ItemNotFoundError):
             self.store.get_item(
                 self.course_locations[self.XML_COURSEID1].replace(name='not_findable', category='problem')
             )
-        with self.assertRaises(ItemNotFoundError):
-            self.store.get_item(self.fake_location)
+        with check_mongo_calls(mongo_store, max_find, max_send):
+            with self.assertRaises(ItemNotFoundError):
+                self.store.get_item(self.fake_location)
 
-    @ddt.data('draft', 'split')
-    def test_get_items(self, default_ms):
+    # draft is 2 to compute inheritance
+    # split is 2 b/c it doesn't look up the definition
+    @ddt.data(('draft', 2, 0), ('split', 2, 0))
+    @ddt.unpack
+    def test_get_chapter(self, default_ms, max_find, max_send):
+        """
+        This test is here for the performance comparison not functionality. It tests the performance
+        of getting an item whose scope.content fields are never looked at.
+        """
         self.initdb(default_ms)
+        mongo_store = self.store._get_modulestore_for_courseid(self._course_key_from_string(self.MONGO_COURSEID))
+        with check_mongo_calls(mongo_store, max_find, max_send):
+            self.assertIsNotNone(self.store.get_item(self.writable_chapter_location))
+
+    # compared to get_item for the course, draft asks for both draft and published
+    @ddt.data(('draft', 3, 0), ('split', 3, 0))
+    @ddt.unpack
+    def test_get_items(self, default_ms, max_find, max_send):
+        self.initdb(default_ms)
+        mongo_store = self.store._get_modulestore_for_courseid(self._course_key_from_string(self.MONGO_COURSEID))
         for course_locn in self.course_locations.itervalues():  # pylint: disable=maybe-no-member
             locn = course_locn.course_key
-            # NOTE: use get_course if you just want the course. get_items is expensive
-            modules = self.store.get_items(locn, category='course')
+            with check_mongo_calls(mongo_store, max_find, max_send):
+                # NOTE: use get_course if you just want the course. get_items is expensive
+                modules = self.store.get_items(locn, category='course')
             self.assertEqual(len(modules), 1)
             self.assertEqual(modules[0].location, course_locn)
 
-    @ddt.data('draft', 'split')
-    def test_update_item(self, default_ms):
+    # a more interesting performance test would be to update a non direct category item
+    # draft updates ancestors: one query to find there are none, and then 2 for inheritance.
+    # split: 3 to get the course structure & the course definition (show_calculator is scope content)
+    #  before the change. 1 during change to refetch the definition. 3 afterward (b/c it calls get_item to return the "new" object).
+    #  3 sends to update index, structure, & definition
+    @ddt.data(('draft', 3, 1), ('split', 7, 3))
+    @ddt.unpack
+    def test_update_item(self, default_ms, max_find, max_send):
         """
         Update should fail for r/o dbs and succeed for r/w ones
         """
         self.initdb(default_ms)
+        mongo_store = self.store._get_modulestore_for_courseid(self._course_key_from_string(self.MONGO_COURSEID))
         course = self.store.get_course(self.course_locations[self.XML_COURSEID1].course_key)
         # if following raised, then the test is really a noop, change it
         self.assertFalse(course.show_calculator, "Default changed making test meaningless")
@@ -301,7 +332,8 @@ class TestMixedModuleStore(unittest.TestCase):
         # if following raised, then the test is really a noop, change it
         self.assertFalse(course.show_calculator, "Default changed making test meaningless")
         course.show_calculator = True
-        self.store.update_item(course, self.user_id)
+        with check_mongo_calls(mongo_store, max_find, max_send):
+            self.store.update_item(course, self.user_id)
         course = self.store.get_course(self.course_locations[self.MONGO_COURSEID].course_key)
         self.assertTrue(course.show_calculator)
 
