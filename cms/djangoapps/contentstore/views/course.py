@@ -119,6 +119,9 @@ def course_handler(request, course_key_string=None):
         if request.method == 'GET':
             return JsonResponse(_course_json(request, CourseKey.from_string(course_key_string)))
         elif request.method == 'POST':  # not sure if this is only post. If one will have ids, it goes after access
+            source_key = request.json.get('source_key', None)
+            if source_key is not None:  # Toggle course cloning for reruns
+                return clone_course(request)
             return create_new_course(request)
         elif not has_course_access(request.user, CourseKey.from_string(course_key_string)):
             raise PermissionDenied()
@@ -284,12 +287,11 @@ def course_index(request, course_key):
     })
 
 
-@expect_json
-def create_new_course(request):
+def _initialize_new_course(request, course_type):
     """
-    Create a new course.
+    :param course_type: string, "new" or "clone"
 
-    Returns the URL for the course overview page.
+    Returns - json response
     """
     if not auth.has_access(request.user, CourseCreatorRole()):
         raise PermissionDenied()
@@ -330,18 +332,30 @@ def create_new_course(request):
         if CourseRole.course_group_already_exists(course_key):
             raise InvalidLocationError()
 
-        fields = {}
-        fields.update(definition_data)
-        fields.update(metadata)
-
-        # Creating the course raises InvalidLocationError if an existing course with this org/name is found
-        new_course = modulestore().create_course(
-            course_key.org,
-            course_key.course,
-            course_key.run,
-            request.user.id,
-            fields=fields,
-        )
+        if course_type == 'new':
+            fields = {}
+            fields.update(definition_data)
+            fields.update(metadata)
+            # Creating the course raises InvalidLocationError if an existing course with this org/name is found
+            new_course = modulestore().create_course(
+                course_key.org,
+                course_key.course,
+                course_key.run,
+                request.user.id,
+                fields=fields,
+            )
+        elif course_type == 'clone':
+            source_course_key = request.json.get('source_key')
+            new_course = modulestore().clone_course(
+                source_course_key,
+                course_key,
+                request.user.id
+            )
+        else:
+            return JsonResponse(
+                {'error': _('Got unrecognized course_type param {}.').format(course_type)},
+                status=400
+            )
 
         # can't use auth.add_users here b/c it requires request.user to already have Instructor perms in this course
         # however, we can assume that b/c this user had authority to create the course, the user can add themselves
@@ -378,6 +392,28 @@ def create_new_course(request):
         return JsonResponse({
             "ErrMsg": _("Unable to create course '{name}'.\n\n{err}").format(name=display_name, err=error.message)}
         )
+
+
+@expect_json
+def clone_course(request):
+    """
+    Create a course clone.
+
+    Returns the URL for the course overview page.
+    """
+    # Post for clone_course needs to have all that's needed for a new course
+    # (org, number, display_name, run), plus a source_key representing the base course.
+    return _initialize_new_course(request, 'clone')
+
+
+@expect_json
+def create_new_course(request):
+    """
+    Create a new course.
+
+    Returns the URL for the course overview page.
+    """
+    return _initialize_new_course(request, 'new')
 
 
 def _users_assign_default_role(course_id):
