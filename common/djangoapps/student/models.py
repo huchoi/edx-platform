@@ -18,6 +18,8 @@ from pytz import UTC
 import uuid
 from collections import defaultdict
 from dogapi import dog_stats_api
+from django.db.models import Q
+import pytz
 
 from django.conf import settings
 from django.utils import timezone
@@ -973,6 +975,11 @@ class CourseEnrollment(models.Model):
         # If the student has already been given a certificate they should not be refunded
         if GeneratedCertificate.certificate_for_student(self.user, self.course_id) is not None:
             return False
+
+        paid_course = CourseMode.objects.filter(Q(course_id=self.course_id) & Q(mode_slug='honor') &
+                                                (Q(expiration_datetime__isnull=True) | Q(expiration_datetime__gte=datetime.now(pytz.UTC)))).exclude(min_price=0)
+        if paid_course:
+            return True
 
         course_mode = CourseMode.mode_for_course(self.course_id, 'verified')
         if course_mode is None:

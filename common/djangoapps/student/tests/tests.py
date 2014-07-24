@@ -148,11 +148,6 @@ class DashboardTest(TestCase):
         self.course = CourseFactory.create(org=self.COURSE_ORG, display_name=self.COURSE_NAME, number=self.COURSE_SLUG)
         self.assertIsNotNone(self.course)
         self.user = UserFactory.create(username="jack", email="jack@fake.edx.org", password='test')
-        CourseModeFactory.create(
-            course_id=self.course.id,
-            mode_slug='honor',
-            mode_display_name='Honor Code',
-        )
         self.client = Client()
 
     @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
@@ -228,6 +223,23 @@ class DashboardTest(TestCase):
 
         verified_mode.expiration_datetime = datetime.now(pytz.UTC) - timedelta(days=1)
         verified_mode.save()
+        self.assertFalse(enrollment.refundable())
+
+    @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
+    def test_refundable_of_purchased_course(self):
+
+        honor_mode = CourseModeFactory.create(
+            course_id=self.course.id,
+            mode_slug='honor',
+            min_price=10,
+            currency='usd',
+            mode_display_name='honor',
+            expiration_datetime=datetime.now(pytz.UTC) + timedelta(days=1)
+        )
+        enrollment = CourseEnrollment.enroll(self.user, self.course.id, mode='honor')
+        self.assertTrue(enrollment.refundable())
+        honor_mode.expiration_datetime = datetime.now(pytz.UTC) - timedelta(days=1)
+        honor_mode.save()
         self.assertFalse(enrollment.refundable())
 
     @unittest.skipUnless(settings.ROOT_URLCONF == 'lms.urls', 'Test only valid in lms')
