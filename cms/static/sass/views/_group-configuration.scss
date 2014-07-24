@@ -44,7 +44,6 @@
       .group-configuration-note {
         @extend %t-copy-sub2;
         display: block;
-        margin-top: ($baseline/4);
         color: $red;
       }
 
@@ -57,7 +56,8 @@
             border-bottom: 0;
 
             .group-configuration-note {
-               margin-left: $baseline;
+              margin-top: ($baseline/4);
+              margin-left: $baseline;
             }
           }
 
@@ -225,6 +225,10 @@
 
         .wrapper-form {
           padding: $baseline ($baseline*1.5);
+        }
+
+        .group-configuration-note {
+          margin-top: ($baseline/2);
         }
 
         .tip {
@@ -402,6 +406,10 @@
                 margin-left: ($baseline*0.5);
               }
             }
+
+            &.group-allocation {
+              color: $gray-l1;
+            }
           }
 
           label.required {
@@ -413,59 +421,55 @@
             }
           }
 
-          &.group-allocation {
-            color: $gray-l1;
+          .field-group {
+            @include clearfix();
+            margin: 0 0 ($baseline/2) 0;
+            padding: ($baseline/4) 0 0 0;
+
+            .group-allocation,
+            .field {
+              display: inline-block;
+              vertical-align: middle;
+              margin: 0 3% 0 0;
+            }
+
+            .group-allocation {
+              max-width: 10%;
+              min-width: 5%;
+              color: $gray-l1;
+            }
+
+            .field {
+              position: relative;
+
+              &.long {
+                width: 80%;
+              }
+
+              &.short {
+                width: 10%;
+              }
+            }
+
+            .action-close {
+              @include transition(color 0.25s ease-in-out);
+              @include font-size(22);
+              display: inline-block;
+              border: 0;
+              padding: 0;
+              background: transparent;
+              color: $blue-l3;
+              vertical-align: middle;
+
+              &:hover {
+                color: $blue;
+              }
+            }
           }
         }
 
         .group-configuration-fields {
           margin-bottom: $baseline;
-        }
-
-        .field-group {
-          @include clearfix();
-          margin: 0 0 ($baseline/2) 0;
-          padding: ($baseline/4) 0 0 0;
-
-          .group-allocation,
-          .field {
-            display: inline-block;
-            vertical-align: middle;
-            margin: 0 3% 0 0;
-          }
-
-          .group-allocation {
-            max-width: 10%;
-            min-width: 5%;
-            color: $gray-l1;
-          }
-
-          .field {
-            position: relative;
-
-            &.long {
-              width: 80%;
-            }
-
-            &.short {
-              width: 10%;
-            }
-          }
-
-          .action-close {
-            @include transition(color 0.25s ease-in-out);
-            @include font-size(22);
-            display: inline-block;
-            border: 0;
-            padding: 0;
-            background: transparent;
-            color: $blue-l3;
-            vertical-align: middle;
-
-            &:hover {
-              color: $blue;
-            }
-          }
         }
       }
 
