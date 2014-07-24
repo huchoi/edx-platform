@@ -7,7 +7,7 @@
             </a>
         </h3>
         <% if (!_.isEmpty(usage)) { %>
-          <span class="note"><%= gettext('Note: this group configuration is already in use and cannot be removed.') %></span>
+          <span class="group-configuration-note"><%= gettext('Note: this group configuration is already in use and cannot be removed.') %></span>
         <% } %>
     </header>
 

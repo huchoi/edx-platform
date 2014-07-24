@@ -33,7 +33,8 @@ define([
         usageText: '.group-configuration-usage-text',
         usageTextAnchor: '.group-configuration-usage-text > a',
         usageUnit: '.group-configuration-usage-unit',
-        usageUnitAnchor: '.group-configuration-usage-unit > a'
+        usageUnitAnchor: '.group-configuration-usage-unit > a',
+        note: '.group-configuration-note'
     };
 
     beforeEach(function() {
@@ -95,6 +96,7 @@ define([
             });
 
             this.collection = new GroupConfigurationCollection([ this.model ]);
+            this.collection.outlineUrl = '/outline';
             this.view = new GroupConfigurationDetails({
                 model: this.model
             });
@@ -104,6 +106,7 @@ define([
         it('should render properly', function() {
             expect(this.view.$el).toContainText('Configuration');
             expect(this.view.$el).toContainText('ID: 0');
+            expect(this.view.$('.delete')).toExist();
         });
 
         it('should show groups appropriately', function() {
@@ -170,6 +173,10 @@ define([
 
             usageUnitAnchors = this.view.$(SELECTORS.usageUnitAnchor);
 
+            expect(this.view.$(SELECTORS.note)).toContainText(
+                'Note: this group configuration is already in use'
+            );
+            expect(this.view.$('.delete')).not.toExist();
             expect(this.view.$(SELECTORS.usageCount)).not.toExist();
             expect(this.view.$(SELECTORS.usageText))
                 .toContainText('This group configuration is used in:');
@@ -191,6 +198,10 @@ define([
             this.model.set('showGroups', true);
             this.view.$('.hide-groups').click();
 
+            expect(this.view.$(SELECTORS.note)).toContainText(
+                'Note: this group configuration is already in use'
+            );
+            expect(this.view.$('.delete')).not.toExist();
             expect(this.view.$(SELECTORS.usageText)).not.toExist();
             expect(this.view.$(SELECTORS.usageUnit)).not.toExist();
             expect(this.view.$(SELECTORS.usageCount))
@@ -233,6 +244,7 @@ define([
                 name: 'Configuration',
                 description: 'Configuration Description'
             });
+            expect(this.view.$('.delete')).toExist();
         });
 
         it ('should allow you to create new groups', function() {
@@ -398,6 +410,14 @@ define([
             expect(this.view.$(SELECTORS.inputGroupName)).toHaveDefaultNames([
                 'Group A', 'Group C', 'Group D', 'Group E', 'Group F', 'Group G'
             ]);
+
+        it('cannot be deleted if it is in use', function () {
+            this.model.set('usage', [ {'label': 'label1', 'url': 'url1'} ]);
+            this.view.render();
+            expect(this.view.$(SELECTORS.note)).toContainText(
+                'Note: this group configuration is already in use'
+            );
+            expect(this.view.$('.delete')).not.toExist();
         });
     });
 
@@ -435,17 +455,27 @@ define([
     });
 
     describe('GroupConfigurationItem', function() {
+        var clickDeleteItem;
+
         beforeEach(function() {
             view_helpers.installTemplates([
                 'group-configuration-edit', 'group-configuration-details'
             ], true);
             this.model = new GroupConfigurationModel({ id: 0 });
             this.collection = new GroupConfigurationCollection([ this.model ]);
+            this.collection.url = '/group_configurations';
             this.view = new GroupConfigurationItem({
                 model: this.model
             });
             appendSetFixtures(this.view.render().el);
         });
+
+        clickDeleteItem = function (view, promptSpy) {
+            view.$(".delete").click();
+            view_helpers.verifyPromptShowing(promptSpy, /Delete this Group Configuration/);
+            view_helpers.confirmPrompt(promptSpy);
+            view_helpers.verifyPromptHidden(promptSpy);
+        }
 
         it('should render properly', function() {
             // Details view by default
@@ -456,6 +486,32 @@ define([
             this.view.$('.action-cancel').click();
             expect(this.view.$(SELECTORS.detailsView)).toExist();
             expect(this.view.$(SELECTORS.editView)).not.toExist();
+        });
+
+        it("should destroy itself on confirmation of deleting", function () {
+            var requests = create_sinon.requests(this),
+                promptSpy = view_helpers.createPromptSpy(),
+                notificationSpy = view_helpers.createNotificationSpy();
+
+            clickDeleteItem(this.view, promptSpy);
+            create_sinon.expectJsonRequest(requests, 'POST', '/group_configurations/0');
+            view_helpers.verifyNotificationShowing(notificationSpy, /Deleting/);
+            create_sinon.respondToDelete(requests);
+            view_helpers.verifyNotificationHidden(notificationSpy);
+            expect($(SELECTORS.itemView)).not.toExist();
+        });
+
+        it('does not hide deleting message if failure', function() {
+            var requests = create_sinon.requests(this),
+                promptSpy = view_helpers.createPromptSpy(),
+                notificationSpy = view_helpers.createNotificationSpy();
+
+            clickDeleteItem(this.view, promptSpy);
+            create_sinon.expectJsonRequest(requests, 'POST', '/group_configurations/0');
+            view_helpers.verifyNotificationShowing(notificationSpy, /Deleting/);
+            create_sinon.respondWithError(requests);
+            view_helpers.verifyNotificationShowing(notificationSpy, /Deleting/);
+            expect($(SELECTORS.itemView)).toExist();
         });
     });
 
