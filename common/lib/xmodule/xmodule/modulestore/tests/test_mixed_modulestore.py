@@ -915,19 +915,8 @@ class TestMixedModuleStore(unittest.TestCase):
         self.initdb(default_ms)
         self._create_block_hierarchy()
 
-        # TODO - Remove these lines once LMS-11017 is implemented
-        course_location = self.course_locations[self.MONGO_COURSEID]
-        self.store.publish(course_location, self.user_id)
-        problem_original_name = 'Problem_Original'
-        problem = self.store.create_child(
-            self.user_id, self.writable_chapter_location, 'problem', 'prob_block',
-            fields={'display_name': problem_original_name},
-        )
-        problem_location = problem.location.version_agnostic().for_branch(None)
-
-        # TODO - Uncomment out these lines once LMS-11017 is implemented
-        # problem_location = self.problem_x1a_1
-        # problem_original_name = 'Problem_x1a_1'
+        problem_location = self.problem_x1a_1
+        problem_original_name = 'Problem_x1a_1'
 
         course_key = problem_location.course_key
         problem_new_name = 'New Problem Name'
@@ -937,7 +926,7 @@ class TestMixedModuleStore(unittest.TestCase):
             Asserts the number of problems with the given display name is the given expected number.
             """
             self.assertEquals(
-                len(self.store.get_items(course_key, settings={'display_name': display_name})),
+                len(self.store.get_items(course_key.for_branch(None), settings={'display_name': display_name})),
                 expected_number
             )
 
@@ -946,7 +935,7 @@ class TestMixedModuleStore(unittest.TestCase):
             Asserts the display_name of the xblock at problem_location matches the given expected value.
             """
             # check the display_name of the problem
-            problem = self.store.get_item(problem_location)
+            problem = self.store.get_item(problem_location.for_branch(None))
             self.assertEquals(problem.display_name, expected_display_name)
 
             # there should be only 1 problem with the expected_display_name
@@ -959,12 +948,13 @@ class TestMixedModuleStore(unittest.TestCase):
 
         # verify Published problem doesn't exist
         with self.store.branch_setting(ModuleStoreEnum.Branch.published_only, course_key):
-            self.assertFalse(self.store.has_item(problem_location))
+            self.assertFalse(self.store.has_item(problem_location.for_branch(None)))
             with self.assertRaises(ItemNotFoundError):
-                self.store.get_item(problem_location)
+                self.store.get_item(problem_location.for_branch(None))
 
         # PUBLISH the problem
-        self.store.publish(problem_location, self.user_id)
+        self.store.publish(self.vertical_x1a, self.user_id)
+        # self.store.publish(problem_location, self.user_id)
 
         # verify Published problem
         with self.store.branch_setting(ModuleStoreEnum.Branch.published_only, course_key):
