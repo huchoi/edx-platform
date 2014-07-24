@@ -12,11 +12,14 @@ from xmodule.modulestore.tests.factories import CourseFactory
 
 from course_modes.models import CourseMode
 from shoppingcart.models import Coupon, PaidCourseRegistration, CourseRegistrationCode
-from mock import patch
+from mock import patch, Mock
 from student.roles import CourseFinanceAdminRole
 
 
 # pylint: disable=E1101
+import instructor.views.instructor_dashboard
+
+
 @override_settings(MODULESTORE=TEST_DATA_MONGO_MODULESTORE)
 class TestECommerceDashboardViews(ModuleStoreTestCase):
     """
@@ -71,6 +74,60 @@ class TestECommerceDashboardViews(ModuleStoreTestCase):
         self.assertFalse('Download All e-Commerce Purchase' in response.content)
         self.assertFalse('<span>Total Amount: <span>$' + str(total_amount) + '</span></span>' in response.content)
 
+    def test_user_view_course_price(self):
+        """
+        test to check if the user views the set price button and price in
+        the instructor dashboard
+        """
+        response = self.client.get(self.url)
+        self.assertTrue(self.e_commerce_link in response.content)
+
+        # Total amount html should render in e-commerce page, total amount will be 0
+        course_honor_mode = CourseMode.mode_for_course(self.course.id, 'honor')
+
+        price = course_honor_mode.min_price
+        self.assertTrue('<span class="price">Course Price: <span>$' + str(price) + '</span></span>' in response.content)
+        self.assertTrue('+ Set Price</a></span>' in response.content)
+
+        # removing the course finance_admin role of login user
+        CourseFinanceAdminRole(self.course.id).remove_users(self.instructor)
+
+        # total amount should not be visible in e-commerce page if the user is not finance admin
+        url = reverse('instructor_dashboard', kwargs={'course_id': self.course.id.to_deprecated_string()})
+        response = self.client.post(url)
+        self.assertFalse('+ Set Price</a></span>' in response.content)
+
+    def test_user_admin_set_course_price(self):
+        """
+        test to set the course price related functionality.
+        test al the scenarios for setting a new course price
+        """
+        set_course_price_url = reverse('set_course_mode_price', kwargs={'course_id': self.course.id.to_deprecated_string()})
+        data = {'course_price': '12%', 'currency': 'usd'}
+
+        # Value Error course price should be a numeric value
+        response = self.client.post(set_course_price_url, data)
+        self.assertTrue("Please Enter the numeric value for the course price" in response.content)
+
+        # validation check passes and course price is successfully added
+        data['course_price'] = 100
+        response = self.client.post(set_course_price_url, data)
+        self.assertTrue("CourseMode added successfully" in response.content)
+
+        # Integrity Error course mode slug already exist in the database
+        with patch.object(instructor.views.instructor_dashboard, 'random_mode_slug', Mock(return_value='honor')):
+            response = self.client.post(set_course_price_url, data)
+            self.assertTrue(
+                "Cannot add duplicate rows. CourseMode with the mode slug({mode_slug}) already exist".format(mode_slug='honor')
+                in response.content
+            )
+
+        course_honor_mode = CourseMode.objects.get(mode_slug='honor')
+        course_honor_mode.delete()
+        # Course Mode not exist with mode slug honor
+        response = self.client.post(set_course_price_url, data)
+        self.assertTrue("CourseMode with the mode slug({mode_slug}) DoesNotExist".format(mode_slug='honor') in response.content)
+
     def test_add_coupon(self):
         """
         Test Add Coupon Scenarios. Handle all the HttpResponses return by add_coupon view
@@ -106,7 +163,6 @@ class TestECommerceDashboardViews(ModuleStoreTestCase):
         response = self.client.post(add_coupon_url, data)
         self.assertTrue("The code ({code}) that you have tried to define is already in use as a registration code"
                         .format(code=data['code']) in response.content)
-
 
     def test_delete_coupon(self):
         """

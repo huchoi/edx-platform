@@ -1,9 +1,14 @@
 """
 Instructor Dashboard Views
 """
+from django.views.decorators.http import require_POST
 
+from django.contrib.auth.decorators import login_required
 import logging
-
+import datetime
+import pytz
+from django.db import IntegrityError
+import os
 from django.utils.translation import ugettext as _
 from django_future.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import cache_control
@@ -11,7 +16,7 @@ from edxmako.shortcuts import render_to_response
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 from django.utils.html import escape
-from django.http import Http404
+from django.http import Http404, HttpResponse, HttpResponseNotFound
 from django.conf import settings
 
 from lms.lib.xblock.runtime import quote_slashes
@@ -131,6 +136,10 @@ def _section_e_commerce(course_key, access):
     """ Provide data for the corresponding dashboard section """
     coupons = Coupon.objects.filter(course_id=course_key).order_by('-is_active')
     total_amount = None
+    course_price = None
+    course_honor_mode = CourseMode.mode_for_course(course_key, 'honor')
+    if course_honor_mode and course_honor_mode.min_price > 0 and course_honor_mode.expiration_datetime is None:
+        course_price = course_honor_mode.min_price
     if access['finance_admin']:
         total_amount = PaidCourseRegistration.get_total_amount_of_purchased_item(course_key)
 
@@ -149,10 +158,56 @@ def _section_e_commerce(course_key, access):
         'generate_registration_code_csv_url': reverse('generate_registration_codes', kwargs={'course_id': course_key.to_deprecated_string()}),
         'active_registration_code_csv_url': reverse('active_registration_codes', kwargs={'course_id': course_key.to_deprecated_string()}),
         'spent_registration_code_csv_url': reverse('spent_registration_codes', kwargs={'course_id': course_key.to_deprecated_string()}),
+        'set_course_mode_url': reverse('set_course_mode_price', kwargs={'course_id': course_key.to_deprecated_string()}),
         'coupons': coupons,
         'total_amount': total_amount,
+        'course_price': course_price
     }
     return section_data
+
+
+@ensure_csrf_cookie
+@cache_control(no_cache=True, no_store=True, must_revalidate=True)
+@require_POST
+@login_required
+def set_course_mode_price(request, course_id):
+    """
+    set the new course price and add new entry in the CoursMode Table
+    """
+    try:
+        course_price = int(request.POST['course_price'])
+    except ValueError:
+        return HttpResponseNotFound(_("Please Enter the numeric value for the course price"))
+    currency = request.POST['currency']
+    course_key = SlashSeparatedCourseKey.from_deprecated_string(course_id)
+
+    course_honor_mode = CourseMode.objects.filter(mode_slug='honor')
+    if not course_honor_mode:
+        return HttpResponseNotFound(
+            _("CourseMode with the mode slug({mode_slug}) DoesNotExist").format(mode_slug='honor')
+        )
+    course_honor_mode.update(
+        expiration_datetime=datetime.datetime.now(pytz.utc),
+        expiration_date=datetime.date.today(), mode_slug=random_mode_slug()
+    )
+    course_mode = CourseMode(
+        course_id=course_key, mode_slug='honor', mode_display_name='honor',
+        min_price=course_price, currency=currency
+    )
+    try:
+        course_mode.save()
+    except IntegrityError:
+        return HttpResponseNotFound(
+            _("Cannot add duplicate rows. CourseMode with the mode slug({mode_slug}) already exist").format(mode_slug='honor')
+        )
+    return HttpResponse(_("CourseMode added successfully"))
+
+
+def random_mode_slug():
+    """
+    random mode slug generator
+    """
+    return 'honor-{}'.format(os.urandom(2).encode('hex'))
 
 
 def _section_course_info(course_key, access):
