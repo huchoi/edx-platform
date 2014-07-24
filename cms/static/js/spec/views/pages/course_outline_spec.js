@@ -341,6 +341,14 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-item-section > .wrapper-xblock-header .configure-button').click();
                     $("#start_date").val("1/2/2015");
+
+                    // Section release date can't be cleared.
+                    expect($(".edit-outline-item-modal .action-clear")).not.toExist();
+
+                    // Section does not contain due_date or grading type selector
+                    expect($("due_date")).not.toExist();
+                    expect($("grading_format")).not.toExist();
+
                     $(".edit-outline-item-modal .action-save").click();
                     create_sinon.expectJsonRequest(requests, 'POST', '/xblock/mock-section', {
                         "metadata":{
@@ -376,9 +384,6 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     create_sinon.respondWithJson(requests, mockResponseSectionJSON);
 
                     expect($(".outline-item-section .release-date")).toContainText("Released: Jan 02, 2015 at 00:00 UTC");
-
-                    // Section release date can't be cleared.
-                    expect($(".edit-outline-item-modal .action-clear")).not.toExist();
                 });
             });
 
