@@ -45,8 +45,8 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     }
                 };
             };
-            createMockSubsectionJSON = function(id, displayName, children, editing_information) {
-                var result = {
+            createMockSubsectionJSON = function(id, displayName, children) {
+                return {
                     id: id,
                     display_name: displayName,
                     category: 'sequential',
@@ -62,15 +62,8 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                         display_name: 'Unit',
                         children: children
                     }
-                };
-                if (editing_information) {
-                    result.graded = true;
-                    result.due_date = 'Jul 09, 2014 at 00:00 UTC';
-                    result.release_date = 'Jan 01, 2970 at 05:00 UTC';
-                };
-                return result;    
+                };   
             };
-
             getHeaderElement = function(selector) {
                 var element = outlinePage.$(selector);
                 return element.find('> .wrapper-xblock-header');
@@ -425,7 +418,7 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     $("#start_date").val("7/9/2014");
                     $("#due_date").val("7/10/2014");
                     $("#grading_type").val("Lab");
-                    $(".edit-outline-item-modal .action-save").click()
+                    $(".edit-outline-item-modal .action-save").click();
                     create_sinon.expectJsonRequest(requests, 'POST', '/xblock/mock-subsection', {
                         "graderType":"Lab",
                         "metadata":{
@@ -433,27 +426,47 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                             "due":"2014-07-10T00:00:00.000Z"
                         }
                     });
-                    var mockResponseCourseJSON = createMockCourseJSON('mock-course', 'Mock Course', [
-                            createMockSectionJSON('mock-section', 'Mock Section', [
-                                createMockSubsectionJSON('mock-subsection', 'Mock Subsection', [{
-                                    id: 'mock-unit',
-                                    display_name: 'Mock Unit',
-                                    category: 'vertical',
-                                    studio_url: '/container/mock-unit',
-                                    is_container: true,
-                                    has_changes: true,
-                                    published: false,
-                                    edited_on: 'Jul 02, 2014 at 20:56 UTC',
-                                    edited_by: 'MockUser'
-                                }
-                            ], true)
-                        ])
-                    ]);
-                    // actual response does not matter, as it is does not used, but then goes refresh,
-                    // and it is contains new JSON
-                    create_sinon.respondWithJson(requests, mockResponseCourseJSON);
-                    // check that release date is updated 
-                    // debugger;
+                    expect(requests[0].requestHeaders['X-HTTP-Method-Override']).toBe('PATCH');
+
+                    // This is the response for the change operation.
+                    create_sinon.respondWithJson(requests, {});
+                    var mockResponseSectionJSON = $.extend(true, {}, 
+                        createMockSectionJSON('mock-section', 'Mock Section', [
+                            createMockSubsectionJSON('mock-subsection', 'Mock Subsection', [{
+                                id: 'mock-unit',
+                                display_name: 'Mock Unit',
+                                category: 'vertical',
+                                studio_url: '/container/mock-unit',
+                                is_container: true,
+                                has_changes: true,
+                                published: false,
+                                edited_on: 'Jul 02, 2014 at 20:56 UTC',
+                                edited_by: 'MockUser'
+                            }
+                            ])
+                        ]),
+                        {
+                            release_date: 'Jan 01, 2970 at 05:00 UTC',   
+                            child_info: { //Section child_info
+                                children: [{ // Section children
+                                    graded: true,
+                                    due_date: 'Jul 09, 2014 at 00:00 UTC',
+                                    release_date: 'Jan 01, 2970 at 05:00 UTC',
+                                    start: "2970-01-01T05:00:00Z",
+                                    format: "Lab",
+                                    due: "2014-07-09T00:00:00Z"
+                                }]
+                            }
+                        }
+                    );
+                    create_sinon.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-section')
+                    expect(requests.length).toBe(2);
+                    // This is the response for the subsequent fetch operation for the section.
+                    create_sinon.respondWithJson(requests, mockResponseSectionJSON);
+
+                    expect($(".outline-item-subsection .meta-info .release-date")).toContainText("Released: Jan 01, 2970 at 05:00 UTC");
+                    expect($(".outline-item-subsection .meta-info .due-date")).toContainText("Due date: Jul 09, 2014 at 00:00 UTC");
+                    expect($(".outline-item-subsection .meta-info .policy")).toContainText("Policy: Lab");
                 });
             });
 
