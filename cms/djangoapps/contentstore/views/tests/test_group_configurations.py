@@ -22,6 +22,43 @@ GROUP_CONFIGURATION_JSON = {
 }
 
 
+class HelperMethods(object):
+    """
+    Mixin that provides useful methods for Group Configuration tests.
+    """
+    def _create_content_experiment(self, cid=None, name_suffix=''):
+        """
+        Create content experiment. Assign Group Configuration to the experiment
+        if needed.
+        """
+        vertical = ItemFactory.create(
+            category='vertical',
+            parent_location=self.course.location,
+            display_name='Test Unit {}'.format(name_suffix)
+        )
+        split_test = ItemFactory.create(
+            category='split_test',
+            parent_location=vertical.location,
+            user_partition_id=cid,
+            display_name='Test Content Experiment {}'.format(name_suffix)
+        )
+        self.save_course()
+        return (vertical, split_test)
+
+    def _add_user_partitions(self, count=1):
+        """
+        Create user partitions for the course.
+        """
+        partitions = [
+            UserPartition(
+                i, 'Name ' + str(i), 'Description ' + str(i), [Group(0, 'Group A'), Group(1, 'Group B'), Group(2, 'Group C')]
+            ) for i in xrange(count)
+        ]
+
+        self.course.user_partitions = partitions
+        self.save_course()
+
+
 # pylint: disable=no-member
 class GroupConfigurationsBaseTestCase(object):
     """
@@ -99,7 +136,7 @@ class GroupConfigurationsBaseTestCase(object):
 
 # pylint: disable=no-member
 @skipUnless(settings.FEATURES.get('ENABLE_GROUP_CONFIGURATIONS'), 'Tests Group Configurations feature')
-class GroupConfigurationsListHandlerTestCase(CourseTestCase, GroupConfigurationsBaseTestCase):
+class GroupConfigurationsListHandlerTestCase(CourseTestCase, GroupConfigurationsBaseTestCase, HelperMethods):
     """
     Test cases for group_configurations_list_handler.
     """
@@ -195,7 +232,7 @@ class GroupConfigurationsListHandlerTestCase(CourseTestCase, GroupConfigurations
 
 # pylint: disable=no-member
 @skipUnless(settings.FEATURES.get('ENABLE_GROUP_CONFIGURATIONS'), 'Tests Group Configurations feature')
-class GroupConfigurationsDetailHandlerTestCase(CourseTestCase, GroupConfigurationsBaseTestCase):
+class GroupConfigurationsDetailHandlerTestCase(CourseTestCase, GroupConfigurationsBaseTestCase, HelperMethods):
     """
     Test cases for group_configurations_detail_handler.
     """
@@ -256,9 +293,10 @@ class GroupConfigurationsDetailHandlerTestCase(CourseTestCase, GroupConfiguratio
         """
         Edit group configuration and check its id and modified fields.
         """
-        self.course.user_partitions = [
-            UserPartition(self.ID, 'First name', 'First description', [Group(0, 'Group A'), Group(1, 'Group B'), Group(2, 'Group C')]),
-        ]
+        # self.course.user_partitions = [
+        #     UserPartition(self.ID, 'First name', 'First description', [Group(0, 'Group A'), Group(1, 'Group B'), Group(2, 'Group C')]),
+        # ]
+        self._add_user_partitions()
         self.save_course()
 
         expected = {
@@ -289,230 +327,166 @@ class GroupConfigurationsDetailHandlerTestCase(CourseTestCase, GroupConfiguratio
         self.assertEqual(user_partititons[0].groups[0].name, u'New Group Name')
         self.assertEqual(user_partititons[0].groups[1].name, u'Group C')
 
+    def test_can_delete_group_configuration(self):
+        """
+        Delete group configuration and check user partitions.
+        """
+        self._add_user_partitions(count=2)
+        self.save_course()
 
-class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
+        response = self.client.delete(
+            self._url(cid=0),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 204)
+        self.reload_course()
+        # Verify that user_partitions is properly updated in the course.
+        user_partititons = self.course.user_partitions
+        self.assertEqual(len(user_partititons), 1)
+        self.assertEqual(user_partititons[0].name, u'Name 1')
+
+    def test_cannot_delete_used_group_configuration(self):
+        """
+        Cannot delete group configuration if it is in use.
+        """
+        self.course.user_partitions = [
+            UserPartition(0, 'First name', 'First description', [Group(0, 'Group A'), Group(1, 'Group B'), Group(2, 'Group C')]),
+            UserPartition(1, 'Second name', 'Second description', [Group(0, 'Group 0'), Group(1, 'Group 1')]),
+        ]
+        self._create_content_experiment(cid=0)
+
+        response = self.client.delete(
+            self._url(cid=0),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 400)
+        content = json.loads(response.content)
+        self.assertTrue(content['error'])
+        self.reload_course()
+        # Verify that user_partitions is properly updated in the course.
+        user_partititons = self.course.user_partitions
+        self.assertEqual(len(user_partititons), 2)
+        self.assertEqual(user_partititons[0].name, u'First name')
+
+    def test_cannot_delete_non_existent_group_configuration(self):
+        """
+        Cannot delete group configuration if it is doesn't exist.
+        """
+        response = self.client.delete(
+            self._url(cid=999),
+            content_type="application/json",
+            HTTP_ACCEPT="application/json",
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 404)
+
+
+# pylint: disable=no-member
+@skipUnless(settings.FEATURES.get('ENABLE_GROUP_CONFIGURATIONS'), 'Tests Group Configurations feature')
+class GroupConfigurationsUsageInfoTestCase(CourseTestCase, HelperMethods):
     def setUp(self):
         """
         Set up group configurations and split test module.
         """
         super(GroupConfigurationsUsageInfoTestCase, self).setUp()
 
-        self.group_configuration_id_1 = 123456789
-        self.group_configuration_1 = {
-            u'description': u'Test description 1',
-            u'id': self.group_configuration_id_1,
-            u'name': u'Group configuration name 1',
-            u'version': 1,
-            u'groups': [
-                {u'id': 0, u'name': u'Group A', u'version': 1},
-                {u'id': 1, u'name': u'Group B', u'version': 1}
-            ]
-        }
-
-        self.group_configuration_id_2 = 987654321
-        self.group_configuration_2 = {
-            u'description': u'Test description 2',
-            u'id': self.group_configuration_id_2,
-            u'name': u'Group configuration name 2',
-            u'version': 1,
-            u'groups': [
-                {u'id': 0, u'name': u'Group A', u'version': 1},
-                {u'id': 1, u'name': u'Group B', u'version': 1}
-            ]
-        }
-        self.course.user_partitions = [UserPartition.from_json(self.group_configuration_1)]
-
-        self.vertical = ItemFactory.create(
-            category='vertical',
-            parent_location=self.course.location,
-            display_name='Test Unit 1'
-        )
-        self.split_test = ItemFactory.create(
-            category='split_test',
-            parent_location=self.vertical.location,
-            user_partition_id=str(self.group_configuration_id_1),
-            display_name='Test Content Experiment 1'
-        )
-        self.save_course()
-
-    def test_group_configuration_used(self):
-        """
-        Test that right datastructure will be created when group configuration is used.
-        """
-        expected_usage_info = {
-            self.group_configuration_id_1: [
-                {
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
-                    'label': 'Test Unit 1 / Test Content Experiment 1'
-                }
-            ]
-        }
-        usage_info = GroupConfiguration._get_usage_info(
-            self.course,
-            self.store,
-            self.course.location.course_key
-        )
-        self.assertEqual(expected_usage_info, usage_info)
-
     def test_group_configuration_not_used(self):
         """
-        Test that right datastructure will be created if group configuration is not used.
+        Test that right data structure will be created if group configuration is not used.
         """
-        self.store.delete_item(self.split_test.location)
-        expected_empty_dict = {}
-        result = GroupConfiguration._get_usage_info(
-            self.course,
-            self.store,
-            self.course.location.course_key
+        self._add_user_partitions()
+        actual = GroupConfiguration.add_usage_info(
+            self.course, self.store, self.course.location.course_key
         )
-        self.assertEqual(expected_empty_dict, result)
+        expected = [{
+            u'id': 0,
+            u'name': u'Name 0',
+            u'description': u'Description 0',
+            u'version': 1,
+            u'groups': [
+                {u'id': 0, u'name': u'Group A', u'version': 1},
+                {u'id': 1, u'name': u'Group B', u'version': 1},
+                {u'id': 2, u'name': u'Group C', u'version': 1},
+            ],
+            u'usage': [],
+        }]
+        self.assertEqual(actual, expected)
 
-    def test_usage_info_added(self):
+    def test_can_get_correct_usage_info(self):
         """
         Test if group configurations json updated successfully.
         """
-        updated_configuration = GroupConfiguration.add_usage_info(
-            self.course,
-            self.store,
-            self.course.location.course_key
+        self._add_user_partitions(count=2)
+        self._create_content_experiment(cid=0, name_suffix='0')
+        self._create_content_experiment(name_suffix='1')
+
+        actual = GroupConfiguration.add_usage_info(
+            self.course, self.store, self.course.location.course_key
         )
+
         expected = [{
-            u'description': u'Test description 1',
-            u'id': self.group_configuration_id_1,
-            u'name': u'Group configuration name 1',
+            u'id': 0,
+            u'name': u'Name 0',
+            u'description': u'Description 0',
             u'version': 1,
             u'groups': [
                 {u'id': 0, u'name': u'Group A', u'version': 1},
-                {u'id': 1, u'name': u'Group B', u'version': 1}
+                {u'id': 1, u'name': u'Group B', u'version': 1},
+                {u'id': 2, u'name': u'Group C', u'version': 1},
             ],
             u'usage': [{
-                'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
-                'label': 'Test Unit 1 / Test Content Experiment 1'
-            }]
-        }]
-        self.assertEqual(expected, updated_configuration)
-
-    def test_usage_info_no_experiment(self):
-        """
-        Test if group configurations json updated successfully if it not used in
-        experiments.
-        """
-        self.store.delete_item(self.split_test.location)
-        updated_configuration = GroupConfiguration.add_usage_info(
-            self.course,
-            self.store,
-            self.course.location.course_key
-        )
-        expected = [{
-            u'description': u'Test description 1',
-            u'id': self.group_configuration_id_1,
-            u'name': u'Group configuration name 1',
+                'url': '/unit/i4x://MITx/999/vertical/Test_Unit_0',
+                'label': 'Test Unit 0 / Test Content Experiment 0',
+            }],
+        }, {
+            u'id': 1,
+            u'name': u'Name 1',
+            u'description': u'Description 1',
             u'version': 1,
             u'groups': [
                 {u'id': 0, u'name': u'Group A', u'version': 1},
-                {u'id': 1, u'name': u'Group B', u'version': 1}
+                {u'id': 1, u'name': u'Group B', u'version': 1},
+                {u'id': 2, u'name': u'Group C', u'version': 1},
             ],
-            u'usage': []
+            u'usage': [],
         }]
-        self.assertEqual(expected, updated_configuration)
 
-    def test_one_configuration_in_multiple_experiments(self):
+        self.assertEqual(actual, expected)
+
+    def test_can_use_one_configuration_in_multiple_experiments(self):
         """
         Test if multiple experiments are present in usage info when they use same
         group configuration.
         """
-        self.vertical_2 = ItemFactory.create(
-            category='vertical',
-            parent_location=self.course.location,
-            display_name='Test Unit 2'
-        )
-        self.split_test_2 = ItemFactory.create(
-            category='split_test',
-            parent_location=self.vertical_2.location,
-            user_partition_id=str(self.group_configuration_id_1),
-            display_name='Test Content Experiment 2'
-        )
-        self.save_course()
 
-        updated_configuration = GroupConfiguration.add_usage_info(
-            self.course,
-            self.store,
-            self.course.location.course_key
+        self._add_user_partitions()
+        self._create_content_experiment(cid=0, name_suffix='0')
+        self._create_content_experiment(cid=0, name_suffix='1')
+
+        actual = GroupConfiguration.add_usage_info(
+            self.course, self.store, self.course.location.course_key
         )
+
         expected = [{
-            u'description': u'Test description 1',
-            u'id': self.group_configuration_id_1,
-            u'name': u'Group configuration name 1',
+            u'id': 0,
+            u'name': u'Name 0',
+            u'description': u'Description 0',
             u'version': 1,
             u'groups': [
                 {u'id': 0, u'name': u'Group A', u'version': 1},
-                {u'id': 1, u'name': u'Group B', u'version': 1}
+                {u'id': 1, u'name': u'Group B', u'version': 1},
+                {u'id': 2, u'name': u'Group C', u'version': 1},
             ],
-            u'usage': [
-                {
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
-                    'label': 'Test Unit 1 / Test Content Experiment 1'
-                },
-                {
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_2',
-                    'label': 'Test Unit 2 / Test Content Experiment 2'
-                },
-            ]
+            u'usage': [{
+                'url': '/unit/i4x://MITx/999/vertical/Test_Unit_0',
+                'label': 'Test Unit 0 / Test Content Experiment 0',
+            }, {
+                'url': '/unit/i4x://MITx/999/vertical/Test_Unit_1',
+                'label': 'Test Unit 1 / Test Content Experiment 1',
+            }],
         }]
-        self.assertEqual(expected, updated_configuration)
-
-    def test_two_configurations_two_experiments(self):
-        """
-        Test if multiple experiments are present in usage info when they use same
-        group configuration.
-        """
-        self.course.user_partitions.append(UserPartition.from_json(self.group_configuration_2))
-        self.vertical_2 = ItemFactory.create(
-            category='vertical',
-            parent_location=self.course.location,
-            display_name='Test Unit 2'
-        )
-        self.split_test_2 = ItemFactory.create(
-            category='split_test',
-            parent_location=self.vertical_2.location,
-            user_partition_id=str(self.group_configuration_id_2),
-            display_name='Test Content Experiment 2'
-        )
-        self.save_course()
-
-        updated_configurations = GroupConfiguration.add_usage_info(
-            self.course,
-            self.store,
-            self.course.location.course_key
-        )
-        expected = [
-            {
-                u'description': u'Test description 1',
-                u'id': self.group_configuration_id_1,
-                u'name': u'Group configuration name 1',
-                u'version': 1,
-                u'groups': [
-                    {u'id': 0, u'name': u'Group A', u'version': 1},
-                    {u'id': 1, u'name': u'Group B', u'version': 1}
-                ],
-                u'usage': [{
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
-                    'label': 'Test Unit 1 / Test Content Experiment 1'
-                }]
-            },
-            {
-                u'description': u'Test description 2',
-                u'id': self.group_configuration_id_2,
-                u'name': u'Group configuration name 2',
-                u'version': 1,
-                u'groups': [
-                    {u'id': 0, u'name': u'Group A', u'version': 1},
-                    {u'id': 1, u'name': u'Group B', u'version': 1}
-                ],
-                u'usage': [{
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_2',
-                    'label': 'Test Unit 2 / Test Content Experiment 2'
-                }]
-            }
-        ]
-        self.assertEqual(expected, updated_configurations)
+        self.assertEqual(actual, expected)
