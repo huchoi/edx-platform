@@ -3,7 +3,7 @@
  * It has nested views: for release date, due date and grading format.
  * It is invoked using the editXBlock method and uses xblock_info as a model,
  * and upon save parent invokes refresh function that fetches updated model and
- * rerenders edited course outline.
+ * re-renders edited course outline.
  */
 define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_modal',
     'date', 'js/views/utils/xblock_utils', 'js/utils/date_utils'

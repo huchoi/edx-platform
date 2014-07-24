@@ -79,7 +79,7 @@ function(Backbone, _, str, ModuleUtils) {
              */
             'currently_visible_to_students': null,
             /**
-             * If xblock is graded, the date after which student assesment will be evaluated.
+             * If xblock is graded, the date after which student assessment will be evaluated.
              */
             'due_date': null,
             /**
