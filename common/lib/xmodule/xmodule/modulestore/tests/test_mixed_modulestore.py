@@ -373,28 +373,6 @@ class TestMixedModuleStore(unittest.TestCase):
         self.assertFalse(self.store.has_changes(component.location))
 
     @ddt.data('draft', 'split')
-    def test_has_changes_missing_child(self, default_ms):
-        self.initdb(default_ms)
-
-        test_course = self.store.create_course('testx', 'GreekHero', 'test_run', self.user_id)
-
-        # Create the parent and point it to a fake child
-        parent = self.store.create_item(
-            self.user_id,
-            test_course.id.version_agnostic(),
-            'sequential',
-            block_id='parent'
-        )
-        parent.children += [test_course.location.replace(
-            block_type='vertical',
-            block_id='does_not_exist'
-        )]
-        self.store.update_item(parent, self.user_id)
-
-        # Check the parent for changes should return False and not throw an exception
-        self.assertFalse(self.store.has_changes(parent.location))
-
-    @ddt.data('draft', 'split')
     def test_delete_item(self, default_ms):
         """
         Delete should reject on r/o db and work on r/w one
