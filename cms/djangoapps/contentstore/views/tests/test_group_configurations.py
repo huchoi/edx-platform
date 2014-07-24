@@ -342,7 +342,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
         expected_usage_info = {
             self.group_configuration_id_1: [
                 {
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
+                    'url': '/unit/i4x://MITx/999/vertical/Test_Unit_1',
                     'label': 'Test Unit 1 / Test Content Experiment 1'
                 }
             ]
@@ -450,11 +450,11 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
             ],
             u'usage': [
                 {
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
+                    'url': '/unit/i4x://MITx/999/vertical/Test_Unit_1',
                     'label': 'Test Unit 1 / Test Content Experiment 1'
                 },
                 {
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_2',
+                    'url': '/unit/i4x://MITx/999/vertical/Test_Unit_2',
                     'label': 'Test Unit 2 / Test Content Experiment 2'
                 },
             ]
@@ -496,7 +496,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
                     {u'id': 1, u'name': u'Group B', u'version': 1}
                 ],
                 u'usage': [{
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
+                    'url': '/unit/i4x://MITx/999/vertical/Test_Unit_1',
                     'label': 'Test Unit 1 / Test Content Experiment 1'
                 }]
             },
@@ -510,7 +510,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
                     {u'id': 1, u'name': u'Group B', u'version': 1}
                 ],
                 u'usage': [{
-                    'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_2',
+                    'url': '/unit/i4x://MITx/999/vertical/Test_Unit_2',
                     'label': 'Test Unit 2 / Test Content Experiment 2'
                 }]
             }
