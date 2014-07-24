@@ -358,7 +358,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
         """
         Test that right datastructure will be created if group configuration is not used.
         """
-        self.store.delete_item(self.split_test.location)
+        self.store.delete_item(self.split_test.location, self.user.id)
         expected_empty_dict = {}
         result = GroupConfiguration._get_usage_info(
             self.course,
@@ -386,7 +386,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
                 {u'id': 1, u'name': u'Group B', u'version': 1}
             ],
             u'usage': [{
-                'url': '/unit/location:MITx+999+Robot_Super_Course+vertical+Test_Unit_1',
+                'url': '/unit/i4x://MITx/999/vertical/Test_Unit_1',
                 'label': 'Test Unit 1 / Test Content Experiment 1'
             }]
         }]
@@ -397,7 +397,7 @@ class GroupConfigurationsUsageInfoTestCase(CourseTestCase):
         Test if group configurations json updated successfully if it not used in
         experiments.
         """
-        self.store.delete_item(self.split_test.location)
+        self.store.delete_item(self.split_test.location, self.user.id)
         updated_configuration = GroupConfiguration.add_usage_info(
             self.course,
             self.store,
