@@ -656,7 +656,7 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
         config = self.page.group_configurations[0]
         config.toggle()
 
-        usages = config.usages[0]
+        usage = config.usages[0]
         config.click_unit_anchor()
 
         # Waiting for the page load and verify that we've landed on the unit page
@@ -665,4 +665,4 @@ class GroupConfigurationsTest(ContainerBase, SplitTestMixin):
             timeout=30
         ).fulfill()
 
-        self.assertIn(unit.name, usages)
+        self.assertIn(unit.name, usage)
