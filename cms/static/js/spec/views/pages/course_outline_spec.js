@@ -376,15 +376,55 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     create_sinon.respondWithJson(requests, mockResponseSectionJSON);
 
                     expect($(".outline-item-section .release-date")).toContainText("Released: Jan 02, 2015 at 00:00 UTC");
+
+                    // Section release date can't be cleared.
+                    expect($(".edit-outline-item-modal .action-clear")).not.toExist();
                 });
             });
 
             describe("Subsection", function() {
-                var getDisplayNameWrapper;
+                var getDisplayNameWrapper, setEditModalValues, mockServerValuesJson;
 
                 getDisplayNameWrapper = function() {
                     return getHeaderElement('.outline-item-subsection').find('.wrapper-xblock-field').first();
                 };
+
+                setEditModalValues = function (start_date, due_date, grading_type) {
+                    $("#start_date").val(start_date);
+                    $("#due_date").val(due_date);
+                    $("#grading_type").val(grading_type);
+                }
+
+                // Contains hard-coded dates because dates are presented in different formats.
+                var mockServerValuesJson = $.extend(true, {},
+                    createMockSectionJSON('mock-section', 'Mock Section', [
+                        createMockSubsectionJSON('mock-subsection', 'Mock Subsection', [{
+                            id: 'mock-unit',
+                            display_name: 'Mock Unit',
+                            category: 'vertical',
+                            studio_url: '/container/mock-unit',
+                            is_container: true,
+                            has_changes: true,
+                            published: false,
+                            edited_on: 'Jul 02, 2014 at 20:56 UTC',
+                            edited_by: 'MockUser'
+                        }
+                        ])
+                    ]),
+                    {
+                        release_date: 'Jan 01, 2970 at 05:00 UTC',
+                        child_info: { //Section child_info
+                            children: [{ // Section children
+                                graded: true,
+                                due_date: 'Jul 10, 2014 at 00:00 UTC',
+                                release_date: 'Jul 09, 2014 at 00:00 UTC',
+                                start: "2014-07-09T00:00:00Z",
+                                format: "Lab",
+                                due: "2014-07-10T00:00:00Z"
+                            }]
+                        }
+                    }
+                );
 
                 it('can be deleted', function() {
                     var promptSpy = view_helpers.createPromptSpy();
@@ -450,9 +490,7 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                 it('can be edited', function() {
                     createCourseOutlinePage(this, mockCourseJSON, false);
                     outlinePage.$('.outline-item-subsection .configure-button').click();
-                    $("#start_date").val("7/9/2014");
-                    $("#due_date").val("7/10/2014");
-                    $("#grading_type").val("Lab");
+                    setEditModalValues("7/9/2014", "7/10/2014", "Lab");
                     $(".edit-outline-item-modal .action-save").click();
                     create_sinon.expectJsonRequest(requests, 'POST', '/xblock/mock-subsection', {
                         "graderType":"Lab",
@@ -465,43 +503,42 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
 
                     // This is the response for the change operation.
                     create_sinon.respondWithJson(requests, {});
-                    var mockResponseSectionJSON = $.extend(true, {}, 
-                        createMockSectionJSON('mock-section', 'Mock Section', [
-                            createMockSubsectionJSON('mock-subsection', 'Mock Subsection', [{
-                                id: 'mock-unit',
-                                display_name: 'Mock Unit',
-                                category: 'vertical',
-                                studio_url: '/container/mock-unit',
-                                is_container: true,
-                                has_changes: true,
-                                published: false,
-                                edited_on: 'Jul 02, 2014 at 20:56 UTC',
-                                edited_by: 'MockUser'
-                            }
-                            ])
-                        ]),
-                        {
-                            release_date: 'Jan 01, 2970 at 05:00 UTC',   
-                            child_info: { //Section child_info
-                                children: [{ // Section children
-                                    graded: true,
-                                    due_date: 'Jul 09, 2014 at 00:00 UTC',
-                                    release_date: 'Jan 01, 2970 at 00:00 UTC',
-                                    start: "2970-01-01T05:00:00Z",
-                                    format: "Lab",
-                                    due: "2014-07-09T00:00:00Z"
-                                }]
-                            }
-                        }
-                    );
                     create_sinon.expectJsonRequest(requests, 'GET', '/xblock/outline/mock-section')
                     expect(requests.length).toBe(2);
                     // This is the response for the subsequent fetch operation for the section.
-                    create_sinon.respondWithJson(requests, mockResponseSectionJSON);
+                    create_sinon.respondWithJson(requests, mockServerValuesJson);
 
-                    expect($(".outline-item-subsection .release-date")).toContainText("Released: Jan 01, 2970 at 00:00 UTC");
-                    expect($(".outline-item-subsection .due-date")).toContainText("Due date: Jul 09, 2014 at 00:00 UTC");
+                    expect($(".outline-item-subsection .release-date")).toContainText("Released: Jul 09, 2014 at 00:00 UTC");
+                    expect($(".outline-item-subsection .due-date")).toContainText("Due date: Jul 10, 2014 at 00:00 UTC");
                     expect($(".outline-item-subsection .policy")).toContainText("Policy: Lab");
+
+                    expect($(".outline-item-subsection .policy")).toContainText("Policy: Lab");
+                    outlinePage.$('.outline-item-subsection .configure-button').click();
+                    expect($("#start_date").val()).toBe('7/9/2014');
+                    expect($("#due_date").val()).toBe('7/10/2014');
+                    expect($("#grading_type").val()).toBe('Lab');
+                });
+
+                it('release date, due date and grading type can be cleared.', function() {
+                    createCourseOutlinePage(this, mockCourseJSON, false);
+                    outlinePage.$('.outline-item-subsection .configure-button').click();
+                    setEditModalValues("7/9/2014", "7/10/2014", "Lab");
+                    $(".edit-outline-item-modal .action-save").click();
+
+                    // This is the response for the change operation.
+                    create_sinon.respondWithJson(requests, {});
+                    // This is the response for the subsequent fetch operation for the section.
+                    create_sinon.respondWithJson(requests, mockServerValuesJson);
+
+                    outlinePage.$('.outline-item-subsection .configure-button').click();
+                    expect($("#start_date").val()).toBe('7/9/2014');
+                    expect($("#due_date").val()).toBe('7/10/2014');
+                    expect($("#grading_type").val()).toBe('Lab');
+
+                    $(".edit-outline-item-modal .scheduled-date-input .action-clear").click();
+                    $(".edit-outline-item-modal .due-date-input .action-clear").click();
+                    expect($("#start_date").val()).toBe('');
+                    expect($("#due_date").val()).toBe('');
                 });
             });
 
