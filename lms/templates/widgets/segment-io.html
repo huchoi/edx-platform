@@ -63,6 +63,31 @@
     }
   % endif
 
+  // Get current page URL
+  var url = window.location.href
+  // Match on the current url and fire the appropriate pageview event
+  if (url.indexOf("/register") > -1) {
+    // Registration page viewed
+    analytics.track("edx.page.register.viewed", {
+      category: "pageview"
+    });
+  } else if (url.indexOf("/login") > -1) {
+    // Login page viewed
+    analytics.track("edx.page.login.viewed", {
+      category: "pageview"
+    });
+  } else if (url.indexOf("/dashboard") > -1) {
+    // Dashboard viewed
+    analytics.track("edx.page.dashboard.viewed", {
+      category: "pageview"
+    });
+  } else {
+    // This event serves as a catch-all, firing when any other page is viewed
+    analytics.track("edx.page.other.viewed", {
+      category: "pageview"
+    });
+  }
+
 </script>
 <!-- end Segment.io -->
 % else:
