@@ -6,8 +6,8 @@ define(['jquery', 'js/views/feedback_notification', 'js/views/feedback_prompt'],
         'use strict';
         var installTemplate, installTemplates, installViewTemplates, createFeedbackSpy, verifyFeedbackShowing,
             verifyFeedbackHidden, createNotificationSpy, verifyNotificationShowing,
-            verifyNotificationHidden, createPromptSpy, confirmPrompt, cancelPrompt,
-            verifyPromptShowing, verifyPromptHidden;
+            verifyNotificationHidden, createPromptSpy, confirmPrompt, verifyPromptShowing,
+            verifyPromptHidden;
 
         installTemplate = function(templateName, isFirst) {
             var template = readFixtures(templateName + '.underscore'),
@@ -73,14 +73,13 @@ define(['jquery', 'js/views/feedback_notification', 'js/views/feedback_prompt'],
             return createFeedbackSpy(Prompt, type || 'Warning');
         };
 
-        confirmPrompt = function(promptSpy) {
-            var options = promptSpy.constructor.mostRecentCall.args[0];
-            options.actions.primary.click(promptSpy);
-        };
-
-        cancelPrompt = function(promptSpy) {
-            var options = promptSpy.constructor.mostRecentCall.args[0];
-            options.actions.secondary.click(promptSpy);
+        confirmPrompt = function(promptSpy, pressSecondaryButton) {
+            expect(promptSpy.constructor).toHaveBeenCalled();
+            if (pressSecondaryButton) {
+                promptSpy.constructor.mostRecentCall.args[0].actions.secondary.click(promptSpy);
+            } else {
+                promptSpy.constructor.mostRecentCall.args[0].actions.primary.click(promptSpy);
+            }
         };
 
         verifyPromptShowing = function(promptSpy, text) {
@@ -99,7 +98,6 @@ define(['jquery', 'js/views/feedback_notification', 'js/views/feedback_prompt'],
             'verifyNotificationShowing': verifyNotificationShowing,
             'verifyNotificationHidden': verifyNotificationHidden,
             'confirmPrompt': confirmPrompt,
-            'cancelPrompt': cancelPrompt,
             'createPromptSpy': createPromptSpy,
             'verifyPromptShowing': verifyPromptShowing,
             'verifyPromptHidden': verifyPromptHidden
