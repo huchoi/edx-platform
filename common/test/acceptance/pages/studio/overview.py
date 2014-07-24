@@ -57,21 +57,24 @@ class CourseOutlineItem(object):
 
     def edit(self):
         self.q(css=self._bounded_selector(self.CONFIGURATION_BUTTON_SELECTOR)).first.click()
-        modal = ItemOutlineModal(self)
+        modal = CourseOutlineModal(self)
         EmptyPromise(lambda: modal.is_shown(), 'Modal is shown.')
         return modal
 
     @property
     def release_date(self):
-        return self.q(css=self._bounded_selector(".release-date")).first.text[0]
+        element = self.q(css=self._bounded_selector(".release-date"))
+        return element.first.text[0] if element.present else None
 
     @property
     def due_date(self):
-        return self.q(css=self._bounded_selector(".due-date")).first.text[0]
+        element = self.q(css=self._bounded_selector(".due-date"))
+        return element.first.text[0] if element.present else None
 
     @property
     def policy(self):
-        return self.q(css=self._bounded_selector(".policy")).first.text[0]
+        element = self.q(css=self._bounded_selector(".policy"))
+        return element.first.text[0] if element.present else None
 
 
 class CourseOutlineContainer(CourseOutlineItem):
@@ -216,7 +219,7 @@ class CourseOutlinePage(CoursePage, CourseOutlineContainer):
         return self.child_at(index)
 
 
-class ItemOutlineModal(object):
+class CourseOutlineModal(object):
     MODAL_SELECTOR = ".edit-outline-item-modal"
 
     def __init__(self, page):
@@ -224,7 +227,7 @@ class ItemOutlineModal(object):
 
     def _bounded_selector(self, selector):
         """
-        Returns `selector`, but limited to this particular `ItemOutlineModal` context.
+        Returns `selector`, but limited to this particular `CourseOutlineModal` context.
         """
         return " ".join([self.MODAL_SELECTOR, selector])
 
@@ -250,7 +253,7 @@ class ItemOutlineModal(object):
     def has_due_date(self):
         return self.find_css("#due_date").present
 
-    def has_grading_type(self):
+    def has_policy(self):
         return self.find_css("#grading_type").present
 
     @property
