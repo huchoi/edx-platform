@@ -172,7 +172,7 @@ define([
 
             expect(this.view.$(SELECTORS.usageCount)).not.toExist();
             expect(this.view.$(SELECTORS.usageText))
-                .toContainText('Group configuration is used in:');
+                .toContainText('This group configuration is used in:');
             expect(this.view.$(SELECTORS.usageUnit).length).toBe(2);
             expect(usageUnitAnchors.length).toBe(2);
             expect(usageUnitAnchors.eq(0)).toContainText('label1');

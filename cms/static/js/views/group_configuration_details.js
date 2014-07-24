@@ -79,7 +79,7 @@ function(BaseView, _, gettext) {
                         Translators: 'count' is number of units that the group
                         configuration is used in.
                     */
-                    'is used in %(count)s unit', 'is used in %(count)s units',
+                    'Used in %(count)s unit', 'Used in %(count)s units',
                     count
                 );
             }
