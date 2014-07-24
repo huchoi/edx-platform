@@ -969,7 +969,16 @@ class GroupConfiguration(object):
         for split_test in descriptors:
             if split_test.user_partition_id not in usage_info:
                 usage_info[split_test.user_partition_id] = []
-            unit = modulestore.get_item(modulestore.get_parent_location(split_test.location))
+
+            unit_location = modulestore.get_parent_location(split_test.location)
+            if not unit_location:
+                continue
+
+            try:
+                unit = modulestore.get_item(unit_location)
+            except ItemNotFoundError:
+                continue
+
             unit_url = reverse_usage_url(
                 'unit_handler',
                 course_key.make_usage_key(unit.location.block_type, unit.location.name)
