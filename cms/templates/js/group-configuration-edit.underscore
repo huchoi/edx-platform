@@ -36,5 +36,8 @@
     <div class="actions">
         <button class="action action-primary" type="submit"><% if (isNew) { print(gettext("Create")) } else { print(gettext("Save")) } %></button>
         <button class="action action-secondary action-cancel"><%= gettext("Cancel") %></button>
+      <% if (_.isEmpty(usage) && !isNew) { %>
+        <a class="button action-delete delete" href="#"><%= gettext("Delete") %></a>
+      <% } %>
     </div>
 </form>

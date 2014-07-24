@@ -48,6 +48,13 @@
           .group-configuration-header {
             margin-bottom: 0;
             border-bottom: 0;
+
+            .note {
+              @extend %t-copy-sub2;
+              display: block;
+              margin: ($baseline/4) 0 0 $baseline;
+              color: $red;
+            }
           }
 
           .group-configuration-title {
@@ -178,6 +185,10 @@
                 @include blue-button;
                 @extend %t-action4;
               }
+
+              .delete {
+                @extend %ui-btn-non;
+              }
             }
           }
         }
@@ -261,6 +272,11 @@
           padding: ($baseline/5) $baseline;
           font-weight: 600;
           text-transform: uppercase;
+        }
+
+        .action-delete {
+          float: right;
+          margin: ($baseline/4) ($baseline/2);
         }
       }
 

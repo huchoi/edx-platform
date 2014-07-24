@@ -951,7 +951,7 @@ class GroupConfiguration(object):
         )
 
     @staticmethod
-    def _get_usage_info(course, modulestore, course_key):
+    def get_usage_info(course, modulestore, course_key):
         """
         Get all units names and their urls that have experiments and associated
         with configurations.
@@ -987,7 +987,7 @@ class GroupConfiguration(object):
 
         Returns json of group configurations updated with usage information.
         """
-        usage_info = GroupConfiguration._get_usage_info(course, modulestore, course_key)
+        usage_info = GroupConfiguration.get_usage_info(course, modulestore, course_key)
         configurations = []
         for partition in course.user_partitions:
             configuration = partition.to_json()
@@ -1049,7 +1049,7 @@ def group_configurations_list_handler(request, course_key_string):
 
 @login_required
 @ensure_csrf_cookie
-@require_http_methods(("POST", "PUT"))
+@require_http_methods(("POST", "PUT", "DELETE"))
 def group_configurations_detail_handler(request, course_key_string, group_configuration_id):
     """
     JSON API endpoint for manipulating a group configuration via its internal ID.
@@ -1082,6 +1082,22 @@ def group_configurations_detail_handler(request, course_key_string, group_config
             course.user_partitions.append(new_configuration)
         store.update_item(course, request.user.id)
         return JsonResponse(new_configuration.to_json(), status=201)
+    elif request.method == "DELETE":
+        if not configuration:
+            return JsonResponse(status=404)
+
+        # Verify that group configuration is not already in use.
+        usages = GroupConfiguration.get_usage_info(course, store, course_key)
+        if usages.get(int(group_configuration_id)):
+            return JsonResponse(
+                {"error": _("This Group Configuration is already in use and cannot be removed.")},
+                status=400
+            )
+
+        index = course.user_partitions.index(configuration)
+        course.user_partitions.pop(index)
+        store.update_item(course, request.user.id)
+        return JsonResponse(status=204)
 
 
 def _get_course_creator_status(user):
