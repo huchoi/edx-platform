@@ -85,11 +85,11 @@ define(["jquery", "underscore", "gettext", "js/views/utils/view_utils", "js/util
         };
 
         /**
-         * Updates the specified field of an xblock to a new value.
+         * Updates the date of an xblock.
          * @param xblockInfo The XBlockInfo model representing the xblock.
-         * @param fieldName The xblock field name to be updated.
-         * @param newValue The new value for the field.
-         * @returns {jQuery promise} A promise representing the updating of the field.
+         * @param xblockData Object representing xblock data as accepted on server.
+         * @param silent flag that turns on/off invokation of subscribed events.
+         * @returns {jQuery promise} A promise representing the updating of the xblock values.
          */
         updateXBlockFields = function(xblockInfo, xblockData, silent) {
             return ViewUtils.runOperationShowingMessage(gettext('Saving&hellip;'),

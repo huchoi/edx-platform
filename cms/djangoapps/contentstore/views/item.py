@@ -181,7 +181,6 @@ def xblock_handler(request, usage_key_string):
             content_type="text/plain"
         )
 
-
 # pylint: disable=unused-argument
 @require_http_methods(("GET"))
 @login_required
@@ -664,7 +663,6 @@ def create_xblock_info(xblock, data=None, metadata=None, include_ancestor_info=F
         xblock_info['child_info'] = _create_xblock_child_info(
             xblock, include_children_predicate=include_children_predicate
         )
-
     return xblock_info
 
 

@@ -1,9 +1,6 @@
 """
-Test new outline page.
-
-selfie: paver test_bokchoy -t test_studio_new_outlie.py --fast
+Tests for course outline page.
 """
-
 from ..pages.studio.auto_auth import AutoAuthPage
 from ..pages.studio.overview import CourseOutlinePage
 from ..fixtures.course import CourseFixture, XBlockFixtureDesc
@@ -19,7 +16,7 @@ UNIT_NAME = 'Test Unit'
 
 class CourseOutlineTest(UniqueCourseTest):
     """
-    Base class for tests that do operations on the container page.
+    Base class for tests that do operations on the course outline page.
     """
     __test__ = True
 

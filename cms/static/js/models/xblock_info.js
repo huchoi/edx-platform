@@ -116,7 +116,6 @@ function(Backbone, _, str, ModuleUtils) {
             if (response.child_info) {
                 response.child_info.children = this.parseXBlockInfoList(response.child_info.children);
             }
-
             return response;
         },
 

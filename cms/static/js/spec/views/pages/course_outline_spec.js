@@ -62,7 +62,7 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                         display_name: 'Unit',
                         children: children
                     }
-                };   
+                };
             };
             getHeaderElement = function(selector) {
                 var element = outlinePage.$(selector);
@@ -243,7 +243,6 @@ define(["jquery", "js/spec_helpers/create_sinon", "js/spec_helpers/view_helpers"
                     expect(requests.length).toBe(requestCount); // No additional requests should be made
                     expect(outlinePage.$('.no-content')).not.toHaveClass('is-hidden');
                     expect(outlinePage.$('.no-content .add-button')).toExist();
-                    //Check there is no due date in mockup
                 });
             });
 

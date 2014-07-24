@@ -1,7 +1,9 @@
 /**
- * The EditXBlockModal is a Backbone view that shows an xblock editor in a modal window.
- * It is invoked using the edit method which is passed an existing rendered xblock,
- * and upon save an optional refresh function can be invoked to update the display.
+ * The EditSectionXBlockModal is a Backbone view that shows an editor in a modal window.
+ * It has nested views: for release date, due date and grading format.
+ * It is invoked using the editXBlock method and uses xblock_info as a model,
+ * and upon save parent invokes refresh function that fetches updated model and
+ * rerenders edited course outline.
  */
 define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_modal',
     'date', 'js/views/utils/xblock_utils', 'js/utils/date_utils'
@@ -137,7 +139,7 @@ define(['jquery', 'backbone', 'underscore', 'gettext', 'js/views/modals/base_mod
         });
 
         BaseDateView = Backbone.View.extend({
-            // Attribute name in the model
+            // Attribute name in the model, should be defined in children classes.
             fieldName: null,
 
             events : {
